@@ -442,6 +442,17 @@ function handWords(c){
 const isPairOrSuited = c => Math.floor(c / 13) <= c % 13;
 function mulberry32(a){ return function(){ a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const PCT = new Float64Array(169); // share of combos ranked above this class (0 = best)
+function chen(cell){
+  const row = Math.floor(cell / 13), col = cell % 13, pair = row === col, suited = row < col;
+  const hi = 12 - Math.min(row, col), lo = 12 - Math.max(row, col);
+  const pts = r => r === 12 ? 10 : r === 11 ? 8 : r === 10 ? 7 : r === 9 ? 6 : (r + 2) / 2;
+  if (pair) return Math.max(5, pts(hi) * 2);
+  let v = pts(hi) + (suited ? 2 : 0);
+  const gap = hi - lo - 1;
+  v -= gap === 0 ? 0 : gap === 1 ? 1 : gap === 2 ? 2 : gap === 3 ? 4 : 5;
+  if (gap <= 1 && hi < 10) v += 1;
+  return Math.ceil(v);
+}
 (function rankClasses(){
   const rnd = mulberry32(11), scores = [];
   for (let cell = 0; cell < 169; cell++) {
@@ -456,7 +467,9 @@ const PCT = new Float64Array(169); // share of combos ranked above this class (0
     let bonus = 0;
     if (row < col) bonus += 0.025;
     if (gap === 1) bonus += 0.012; else if (gap === 2) bonus += 0.006;
-    scores.push({ cell, s: w / n + bonus });
+    // order by the Chen formula (a standard starting-hand score that values suited and connected high cards);
+    // the equity number only breaks ties inside the same Chen score
+    scores.push({ cell, s: chen(cell) + 0.9 * (w / n + bonus) });
   }
   scores.sort((x, y) => y.s - x.s);
   let cum = 0; for (const { cell } of scores) { PCT[cell] = cum / 1326; cum += CELL_COMBOS[cell].length; }
@@ -1761,7 +1774,7 @@ const WORDS = `<dl class="gloss">
   <dt>Draw</dt><dd>One card away from a flush or straight. Open-ended means either end works; a gutshot needs one exact card.</dd>
   <dt>Dry or wet board</dt><dd>A dry board has few possible straights or flushes; a wet board has lots of them.</dd>
   <dt>Slow-play</dt><dd>Checking or calling with a big hand to trap. At low stakes, betting big hands is usually better.</dd>
-  <dt>Play / raise (under each name)</dt><dd>How often that player puts money in before the flop, and how often they raise before the flop, over the hands you have seen at this table. Rough guide over many hands: calling station about 40% play / 7% raise; rock about 15% / 7%; solid player about 22% / 16%; maniac about 43% / 36%. Small samples swing a lot, so trust the numbers more after 30+ hands.</dd>
+  <dt>Play / raise (under each name)</dt><dd>How often that player puts money in before the flop, and how often they raise before the flop, over the hands you have seen at this table. Rough guide over many hands: calling station about 40% play / 7% raise; rock about 17% / 8%; solid player about 23% / 17%; maniac about 43% / 36%. Small samples swing a lot, so trust the numbers more after 30+ hands.</dd>
   <dt>Coach style</dt><dd>Friendly (the default) raises less often and smaller: $0.60 first in, limps with small pairs and suited hands, raises limpers only with premium hands, and re-raises only with aces or kings. Max win raises more and bigger to win the most money, at the cost of drawing more attention.</dd>
   <dt>Calling station</dt><dd>A player who calls with almost anything. Never bluff them; bet your good hands.</dd>
   <dt>Isolation raise</dt><dd>Raising after one or more players limped, to play the pot against them with a better hand. Raise 4 big blinds plus 1 for each limper.</dd>
