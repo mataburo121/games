@@ -1655,7 +1655,8 @@ function renderStrip(){
       html = `${prev}<div><b>Your move.</b> ${tc > 0 ? `It costs ${money(tc)} to call, and the pot is ${money(potTotal())}.` : 'Nobody has bet yet.'} <span class="muted">The coach grades you after you act.</span></div>`;
     } else {
       const A = S.analysis;
-      const odds = settings.showOdds !== 'off' && A.eq != null;
+      // before the flop the estimate only counts players already in the pot, so it can contradict the advice: show it after the flop only
+      const odds = settings.showOdds !== 'off' && A.eq != null && S.street > 0;
       html = odds
         ? `${prev}<div class="srow"><span class="nums"><b>${pct(A.eq)}</b> to win${A.req != null ? ` · need <b>${pct(A.req)}</b>` : ''}</span><span class="bestchip">Best: ${bestLabel(A)}</span></div>
         ${minibar(A.eq, A.req)}
@@ -1813,7 +1814,7 @@ const WORDS = `<dl class="gloss">
   <dt>Raise</dt><dd>Making the bet bigger. A raise "to $0.60" means your total bet becomes $0.60.</dd>
   <dt>All-in</dt><dd>Betting all of your chips.</dd>
   <dt>Flop, turn, river</dt><dd>The shared cards: three at once (flop), then one more (turn), then the last one (river).</dd>
-  <dt>Show odds</dt><dd>On by default: the top of the coach panel shows how often your hand wins and what a call needs. Before the flop these only count players already in the pot, so they can look better than the hand really is; the coach's advice there comes from hand-strength rules. Turn them off in Settings, Coach.</dd>
+  <dt>Show odds</dt><dd>On by default: after the flop, the top of the coach panel shows how often your hand wins and what a call needs. They are hidden before the flop, where players still to act behind you make them misleading; the coach's advice there comes from hand-strength rules. Turn them off in Settings, Coach.</dd>
   <dt>To win</dt><dd>How often your hand wins by the river against what the other players might hold.</dd>
   <dt>Need</dt><dd>How often a call has to win to pay for itself. Calling $1 into a $3 pot means you pay $1 to win $4, so you need to win 1 time in 4 (25%).</dd>
   <dt>Suited</dt><dd>Both of your cards are the same suit.</dd>
