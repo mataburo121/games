@@ -112,6 +112,14 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .dbtn{position:absolute;top:-13px;right:-9px;z-index:2;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#FFFFFF,#E5E1D6);color:#141414;font:800 13px var(--font-display);box-shadow:0 0 0 2px var(--gold),0 0 0 5px color-mix(in srgb,var(--gold) 28%,transparent),0 4px 10px rgba(0,0,0,.45)}
 .seat.left .dbtn{right:auto;left:-9px}
 @media (max-width:640px){.dbtn{width:22px;height:22px;font-size:11px;top:-10px;right:-7px}.seat.left .dbtn{right:auto;left:-7px}.pos{font-size:9px;padding:0 5px}.seat.hero .pos{font-size:10.5px}}
+/* swipe your cards up to fold */
+.seat.hero .cards{transition:transform .22s ease-out,opacity .22s ease-out}
+.seat.hero.swipe .cards{touch-action:none;cursor:grab}
+.seat.hero .cards.dragging{transition:none;cursor:grabbing}
+.foldlbl{display:flex;flex-direction:column;align-items:center;line-height:1.1}
+.foldlbl small{font:500 11px var(--font-body);color:var(--muted);margin-top:2px}
+.toast{position:absolute;left:50%;bottom:calc(46px * 1.4 + 90px);transform:translateX(-50%);z-index:6;font:600 12.5px var(--font-body);color:var(--felt-ink);background:var(--plate);border:1px solid var(--felt-line);border-radius:999px;padding:5px 12px;white-space:nowrap;box-shadow:0 8px 20px -6px rgba(0,0,0,.5)}
+@media (prefers-reduced-motion:reduce){.seat.hero .cards{transition:none}}
 .tag-reg{color:var(--t-reg)} .tag-rock{color:var(--t-rock)} .tag-maniac{color:var(--t-maniac)} .tag-station{color:var(--t-station)}
 .made{font:600 12px var(--font-body);color:var(--felt-ink);background:var(--plate);border:1px solid var(--felt-line);border-radius:999px;padding:1px 10px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cards{display:flex;gap:3px;min-height:calc(var(--cw)*1.4)}
@@ -250,6 +258,8 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
       <div class="seg" data-key="labels" role="group" aria-label="Player type labels"><button type="button" data-val="hide">Hidden</button><button type="button" data-val="show">Shown</button></div></div>
       <div class="ctl"><span class="ctl-label">Bots</span>
       <div class="seg" data-key="speed" role="group" aria-label="Bot speed"><button type="button" data-val="normal">Normal</button><button type="button" data-val="fast">Fast</button></div></div>
+      <div class="ctl"><span class="ctl-label">Swipe up to fold</span>
+      <div class="seg" data-key="swipe" role="group" aria-label="Swipe up on your cards to fold"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
     </div></section>
     <section class="sgroup"><h2>Coach</h2><div class="row">
       <div class="ctl"><span class="ctl-label">Mode</span>
@@ -503,7 +513,7 @@ const store = {
 };
 const blankStats = () => ({ hands: 0, net: 0, decisions: 0, good: 0, ok: 0, bad: 0, leak: 0, spots: {} });
 const saved = store.get() || {};
-const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide' }, saved.settings || {});
+const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0 }, saved.settings || {});
 let stats = Object.assign(blankStats(), saved.stats || {});
 let log = Array.isArray(saved.log) ? saved.log : [];
 let redo = Array.isArray(saved.redo) ? saved.redo : []; // missed spots saved for replay
@@ -1259,7 +1269,10 @@ function seatHTML(p){
   else if (!p.folded) tag = p.allIn && !S.over ? 'All-in' : p.last;
   const bubble = tag ? `<span class="bubble">${tag}</span>` : '';
   const cls = `seat${p.i === 0 ? ' hero' : ''}${p.i === S.button ? ' is-btn' : ''}${active ? ' active' : ''}${p.folded ? ' folded' : ''}`;
-  if (p.i === 0) return `<div class="${cls}" style="left:50%"><div class="cards">${cards}</div><div class="made">${heroMade()}</div>${plate}</div>`;
+  if (p.i === 0) {
+    const sw = canSwipe();
+    return `<div class="${cls}${sw ? ' swipe' : ''}" style="left:50%"><div class="cards"${sw ? ' title="Drag up to fold"' : ''}>${cards}</div><div class="made">${heroMade()}</div>${plate}</div>`;
+  }
   const [x, y] = seatXY(p.i, S.n, 1);
   return `<div class="${cls}${x < 49 ? ' left' : ''}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%"${settings.labels === 'show' ? ` title="${p.prof.blurb}"` : ''}><div class="cards">${cards}</div>${plate}${bubble}</div>`;
 }
@@ -1339,7 +1352,7 @@ function renderActions(){
     <div class="act-row">
       ${ui.sizing
         ? '<button type="button" class="btn" id="cancelBtn" data-act="cancel">Back</button>'
-        : `<button type="button" class="btn fold" id="foldBtn" data-act="fold" ${tc > 0 ? '' : 'disabled'}>Fold <kbd>F</kbd></button>`}
+        : `<button type="button" class="btn fold" id="foldBtn" data-act="fold" ${tc > 0 ? '' : 'disabled'}>${foldLabel()} <kbd>F</kbd></button>`}
       ${ui.sizing ? '<span></span>' : `<button type="button" class="btn" id="callBtn" data-act="${tc > 0 ? 'call' : 'check'}">${tc > 0 ? `Call ${money(tc)}` : 'Check'} <kbd>C</kbd></button>`}
       <button type="button" class="btn raise" id="raiseBtn" data-act="${ui.sizing ? 'raise' : 'open'}" ${cr ? '' : 'disabled'}><span id="raiseLbl">${ui.sizing ? raiseText(v) : `${word}…`}</span> <kbd>R</kbd></button>
     </div>`;
@@ -1545,6 +1558,42 @@ $('#dock').addEventListener('click', e => {
   if (a === 'raise') return heroAct('raise', curAmt());
   heroAct(a);
 });
+// swipe up on your own cards to fold (mouse drag works too)
+const touchUI = window.matchMedia('(hover:none)');
+// teach the gesture on the Fold button until it has been used a few times
+const foldLabel = () => canSwipe() && touchUI.matches && (settings.swipeSeen || 0) < 3 ? '<span class="foldlbl">Fold<small>or swipe cards ↑</small></span>' : 'Fold';
+function canSwipe(){ return settings.swipe === 'on' && S && !SIM && !S.over && S.toAct === 0 && !S.pl[0].folded && !!S.analysis; }
+let drag = null;
+function tableToast(msg){
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg;
+  $('#table').appendChild(t); setTimeout(() => t.remove(), 1700);
+}
+$('#table').addEventListener('pointerdown', e => {
+  const c = e.target.closest('.seat.hero.swipe .cards'); if (!c || !canSwipe()) return;
+  drag = { el: c, id: e.pointerId, y0: e.clientY, t0: performance.now(), dy: 0 };
+  try { c.setPointerCapture(e.pointerId); } catch (err) {}
+  c.classList.add('dragging');
+});
+$('#table').addEventListener('pointermove', e => {
+  if (!drag || e.pointerId !== drag.id) return;
+  drag.dy = Math.min(0, e.clientY - drag.y0);
+  drag.el.style.transform = `translateY(${drag.dy}px)`;
+  drag.el.style.opacity = String(Math.max(0.35, 1 + drag.dy / 220));
+});
+function endDrag(e){
+  if (!drag || e.pointerId !== drag.id) return;
+  const d = drag; drag = null; d.el.classList.remove('dragging');
+  const v = d.dy / Math.max(1, performance.now() - d.t0), far = d.dy < -70 || (d.dy < -30 && v < -0.5);
+  if (far && canSwipe() && toCall(S.pl[0]) > 0) {
+    d.el.style.transform = 'translateY(-170px)'; d.el.style.opacity = '0';
+    setTimeout(() => { if (!canSwipe()) return; settings.swipeSeen = (settings.swipeSeen || 0) + 1; heroAct('fold'); }, 190);
+    return;
+  }
+  d.el.style.transform = ''; d.el.style.opacity = '';
+  if (far) tableToast('No bet to fold to. Check for free.');
+}
+$('#table').addEventListener('pointerup', endDrag);
+$('#table').addEventListener('pointercancel', endDrag);
 $('#dock').addEventListener('input', e => { if (e.target.id === 'amt') setAmt(parseInt(e.target.value, 10)); });
 document.querySelector('.tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b) return;
@@ -1570,7 +1619,7 @@ $('#drill').addEventListener('change', e => { settings.drill = e.target.value; u
 $('#settings').addEventListener('click', e => {
   const b = e.target.closest('.seg[data-key] button'); if (!b) return;
   const key = b.closest('.seg').dataset.key;
-  settings[key] = b.dataset.val; save(); renderControls(); if (!SIM) { renderTabs(); if (key === 'labels') renderTable(); }
+  settings[key] = b.dataset.val; save(); renderControls(); if (!SIM) { renderTabs(); renderTable(); }
 });
 let resetArmed = null;
 $('#tabBody').addEventListener('click', e => {
