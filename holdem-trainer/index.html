@@ -342,7 +342,7 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
       <div class="ctl"><span class="ctl-label">Stats by spot</span>
       <div class="seg" data-key="bySpot" role="group" aria-label="Stats by situation"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
     </div></section>
-    <p class="ver" id="ver">Version 37 · Nov 10 <button type="button" class="smallbtn" id="reloadBtn">Reload to get the latest version</button></p>
+    <p class="ver" id="ver">Version 38 · Nov 10 <button type="button" class="smallbtn" id="reloadBtn">Reload to get the latest version</button></p>
   </div>
 
   <main class="grid">
@@ -463,22 +463,11 @@ function chen(cell){
   return Math.ceil(v);
 }
 (function rankClasses(){
-  const rnd = mulberry32(11), scores = [];
+  // order by the Chen formula; ties go to the higher top card, then the higher kicker, then suited
+  const scores = [];
   for (let cell = 0; cell < 169; cell++) {
-    const cs = CELL_COMBOS[cell], n = 320; let w = 0;
-    for (let i = 0; i < n; i++) {
-      const [a, b] = COMBOS[cs[(rnd() * cs.length) | 0]], pk = [];
-      while (pk.length < 7) { const c = (rnd() * 52) | 0; if (c === a || c === b || pk.indexOf(c) >= 0) continue; pk.push(c); }
-      const bd = pk.slice(2), h = evalHand([a, b, ...bd]), v = evalHand([pk[0], pk[1], ...bd]);
-      w += h > v ? 1 : h === v ? 0.5 : 0;
-    }
-    const row = Math.floor(cell / 13), col = cell % 13, gap = Math.abs(row - col);
-    let bonus = 0;
-    if (row < col) bonus += 0.025;
-    if (gap === 1) bonus += 0.012; else if (gap === 2) bonus += 0.006;
-    // order by the Chen formula (a standard starting-hand score that values suited and connected high cards);
-    // the equity number only breaks ties inside the same Chen score
-    scores.push({ cell, s: chen(cell) + 0.9 * (w / n + bonus) });
+    const row = Math.floor(cell / 13), col = cell % 13, hi = 12 - Math.min(row, col), lo = 12 - Math.max(row, col);
+    scores.push({ cell, s: chen(cell) + 0.03 * hi + 0.002 * lo + (row < col ? 0.001 : 0) });
   }
   scores.sort((x, y) => y.s - x.s);
   let cum = 0; for (const { cell } of scores) { PCT[cell] = cum / 1326; cum += CELL_COMBOS[cell].length; }
@@ -986,7 +975,7 @@ const PREMIUM = new Set(['AA','KK','QQ','JJ','TT','AKs','AKo','AQs','AQo']);
 const CALLERS = new Set(['22','33','44','55','66','77','88','99','AJs','AJo','ATs','ATo','KQs','KQo','KJs','KJo','QJs','QJo','JTs','T9s','98s','87s','76s','65s','54s']);
 const SMALL_PAIRS = new Set(['22','33','44','55','66','77','88','99']);
 const SPEC_LIMP = new Set([...SMALL_PAIRS, 'A9s','A8s','A7s','A6s','A5s','A4s','A3s','A2s','KTs','K9s','QTs','Q9s','JTs','J9s','T9s','T8s','98s','97s','87s','86s','76s','75s','65s','64s','54s']);
-const BIG_OFFSUIT = new Set(['AJo','ATo','A9o','KQo','KJo','KTo','QJo','QTo','JTo']);
+const BIG_OFFSUIT = new Set(['AJo','ATo','KQo','KJo','KTo','QJo','QTo','JTo']);
 const STEAL3B = new Set(['JTs','T9s','99','88','77','A9s','ATs','AJs','KQs']);
 const OPEN_BY_BEHIND = [0, 0.25, 0.35, 0.27, 0.17, 0.13, 0.11]; // share of hands to open, by players left to act
 const KIND_WORD = { station: 'calling station', rock: 'rock', reg: 'solid player', maniac: 'maniac' };
@@ -1090,7 +1079,7 @@ function analyze(iters){
     if (ctx.kind === 'unopened') {
       size = fit(3 * BB_C);
       sizeWhy = 'A standard 3x raise ($0.60) builds the pot with your good hands without drawing much attention.';
-      if (p < openT && SPEC_LIMP.has(nc) && !PREMIUM.has(nc)) {
+      if (p < openT && p >= 0.07 && SPEC_LIMP.has(nc) && !PREMIUM.has(nc) && (me.pos === 'Early' || me.pos === 'Middle')) {
         good.add('call'); ok.add('raise'); label = `${hw}, a hand that wants a cheap flop`;
         rule = 'Friendly: limp in. Save your raises for strong hands.';
         why = `${seatWhy} Small pairs, suited aces and suited connectors win big pots when they make a set, flush or straight, so a cheap low-key flop suits them. Miss the flop? Let it go.`;
@@ -1155,13 +1144,16 @@ function analyze(iters){
         good.add('raise'); label = `${hw}, strong enough to punish the limpers`; rule = `Exploit: raise the limpers to ${M(size)}.`;
         why = `${limpWord}. Limpers usually hold weak hands they won't fold before the flop, so raise to play a bigger pot against them with the better hand. ${sizeWhy}`;
       } else if (SPEC_LIMP.has(nc)) {
-        good.add('call'); ok.add('fold'); if (p < openT) ok.add('raise');
-        label = `${hw}, a good hand for a cheap multiway pot`; rule = 'Exploit: limp behind with small pairs, suited aces and suited connectors.';
+        if (late && p < openT) { good.add('raise'); ok.add('call'); } else { good.add('call'); ok.add('fold'); if (p < openT) ok.add('raise'); }
+        label = `${hw}, a good hand for a cheap multiway pot`; rule = late && p < openT ? `Raise the limpers to ${M(size)} from your late seat, or limp behind.` : 'Exploit: limp behind with small pairs, suited aces and suited connectors.';
         why = `${limpWord}, so it is cheap and several players will see the flop. These hands rarely win without improving, but when they make a set, flush or straight, passive players pay you off with top pair. If you miss the flop, let it go.`;
       } else if (BIG_OFFSUIT.has(nc) && p < openT) {
         if (late) { good.add('raise'); ok.add('fold'); } else { good.add('fold'); ok.add('raise'); }
         label = `${hw}, a trap hand in a limped pot`; rule = late ? `Raise to ${M(size)} or fold. Don't limp.` : 'Fold. Don\'t limp with offsuit big cards.';
         why = `Offsuit big cards make top pair with a weak kicker in multiway pots, the hand that loses the most money in home games. ${late ? 'From a late seat, raise to thin the field and take the betting lead.' : 'With players still to act behind you, just fold.'} ${late ? sizeWhy : ''}`;
+      } else if (p < openT && nc.endsWith('o')) {
+        good.add('fold'); ok.add('raise'); label = `${hw}, a weak offsuit hand in a limped pot`; rule = late ? 'Fold. A raise from a late seat is OK, but weak offsuit hands lose the big pots.' : 'Fold. Weak offsuit hands lose the big pots.';
+        why = `${limpWord}. When you pair your high card, a limper often has the same card with a better kicker, so you win small pots and lose big ones.`;
       } else if (p < openT) {
         good.add('raise'); ok.add('call'); label = `${hw}, a hand worth playing`; rule = `Raise the limpers to ${M(size)}.`;
         why = `${limpWord}. This hand is good enough to raise and take the betting lead. ${sizeWhy}`;
