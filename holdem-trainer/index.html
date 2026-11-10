@@ -159,7 +159,7 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .betchip::before{content:"";width:15px;height:15px;border-radius:50%;background:radial-gradient(circle,var(--gold) 0 42%,transparent 43%),repeating-conic-gradient(var(--gold) 0 30deg,#FFF6E0 0 60deg);box-shadow:0 0 0 1.5px var(--gold),0 1px 2px rgba(0,0,0,.4)}
 @media (max-width:640px){.betchip{font-size:10px;padding:2px 7px 2px 2px}.betchip::before{width:12px;height:12px}}
 .center{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:8px;width:min(80%,440px);color:var(--felt-ink);z-index:1;--cw:42px}
-@media (max-width:640px){.center{--cw:33px;top:43%}}
+@media (max-width:640px){.center{--cw:28px;top:45%;width:46%;gap:6px}.board{gap:4px}.result{padding:5px 9px;font-size:11px}.result strong{font-size:12px}.potline{padding:2px 10px}}
 .board{display:flex;gap:5px}
 .potline{display:flex;gap:10px;align-items:baseline;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--felt-muted);background:rgba(0,0,0,.45);border-radius:999px;padding:3px 12px}
 .potline b{font:600 14px var(--font-mono);letter-spacing:0;color:var(--felt-ink);text-transform:none}
@@ -1279,7 +1279,7 @@ function cardHTML(c, o = {}){
 const mini = c => `<span class="mc s${c & 3}">${RANKS[c >> 2]}${SYM[c & 3]}</span>`;
 const minis = arr => arr.map(mini).join(' ');
 function seatXY(k, n, scale){
-  const a = (90 + k * 360 / n) * Math.PI / 180, rx = (narrow.matches ? 38 : 43) * scale, ry = (narrow.matches ? 40 : 39) * scale;
+  const a = (90 + k * 360 / n) * Math.PI / 180, rx = (narrow.matches ? 41 : 43) * scale, ry = (narrow.matches ? (Math.sin(a) < 0 ? 44 : 40) : 39) * scale;
   return [50 + rx * Math.cos(a), 50 + ry * Math.sin(a)];
 }
 function heroMade(){
