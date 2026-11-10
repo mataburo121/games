@@ -122,7 +122,9 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 @media (max-width:640px){.dbtn{width:22px;height:22px;font-size:11px;top:-10px;right:-7px}.seat.left .dbtn{right:auto;left:-7px}.pos{font-size:9px;padding:0 5px}.seat.hero .pos{font-size:10.5px}}
 /* swipe your cards up to fold */
 .seat.hero .cards{transition:transform .22s ease-out,opacity .22s ease-out}
-.seat.hero.swipe .cards{touch-action:none;cursor:grab}
+/* the whole seat plus a margin around the cards catches the swipe, and the page won't scroll from there */
+.seat.hero.swipe{touch-action:none;-webkit-user-select:none;user-select:none;cursor:grab}
+.seat.hero.swipe::before{content:"";position:absolute;inset:-36px -26px -8px;border-radius:28px}
 .seat.hero .cards.dragging{transition:none;cursor:grabbing}
 .foldlbl{display:flex;flex-direction:column;align-items:center;line-height:1.1}
 .foldlbl small{font:500 11px var(--font-body);color:var(--muted);margin-top:2px}
@@ -1658,7 +1660,8 @@ function tableToast(msg){
   $('#table').appendChild(t); setTimeout(() => t.remove(), 1700);
 }
 $('#table').addEventListener('pointerdown', e => {
-  const c = e.target.closest('.seat.hero.swipe .cards'); if (!c || !canSwipe()) return;
+  const seat = e.target.closest('.seat.hero.swipe'); if (!seat || !canSwipe()) return;
+  const c = seat.querySelector('.cards'); if (!c) return;
   drag = { el: c, id: e.pointerId, y0: e.clientY, t0: performance.now(), dy: 0 };
   try { c.setPointerCapture(e.pointerId); } catch (err) {}
   c.classList.add('dragging');
