@@ -135,6 +135,12 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .meter i.on{background:var(--pc);box-shadow:0 0 8px 0 color-mix(in srgb,var(--pc) 70%,transparent)}
 .seat.hero .meter i{width:14px;height:6px}
 @media (max-width:640px){.meter{justify-content:center;gap:2px}.meter i{width:8px;height:4px}.seat.hero .meter i{width:12px;height:5px}}
+.sm{display:inline-flex;align-items:flex-end;gap:4px;white-space:nowrap}
+.stk{position:relative;display:inline-block;width:13px;flex:none;--c:var(--gold);margin-bottom:1px}
+.stk i{position:absolute;left:0;width:13px;height:4.5px;border-radius:50%;background:var(--c);box-shadow:inset 0 -1.2px 0 rgba(0,0,0,.4),inset 0 0 0 .8px rgba(255,255,255,.4),0 .5px 1px rgba(0,0,0,.45)}
+.stk i:nth-child(odd){background:color-mix(in srgb,var(--c) 82%,#fff)}
+.seat.hero .stk{transform:scale(1.2);transform-origin:bottom center;margin-right:2px}
+@media (max-width:640px){.stk{width:11px}.stk i{width:11px;height:4px}}
 .tag-reg{color:var(--t-reg)} .tag-rock{color:var(--t-rock)} .tag-maniac{color:var(--t-maniac)} .tag-station{color:var(--t-station)}
 .made{font:600 12px var(--font-body);color:var(--felt-ink);background:var(--plate);border:1px solid var(--felt-line);border-radius:999px;padding:1px 10px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cards{display:flex;gap:3px;min-height:calc(var(--cw)*1.4)}
@@ -279,6 +285,8 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
       <select id="stack"><option value="1000">$10</option><option value="2000">$20</option><option value="4000">$40</option></select></div>
       <div class="ctl"><label class="ctl-label" for="mix">Table</label>
       <select id="mix"><option value="home">Home game mix</option><option value="station">All calling stations</option><option value="rock">All rocks</option><option value="maniac">All maniacs</option><option value="reg">All solid amateurs</option></select></div>
+      <div class="ctl"><span class="ctl-label">Stacks</span>
+      <div class="seg" data-key="carry" role="group" aria-label="Chip stacks between hands"><button type="button" data-val="on" title="Chips carry over between hands; busted players rebuy">Carry over</button><button type="button" data-val="off" title="Everyone starts each hand with the full buy-in">Reset each hand</button></div></div>
       <div class="ctl"><span class="ctl-label">Player types</span>
       <div class="seg" data-key="labels" role="group" aria-label="Player type labels"><button type="button" data-val="hide">Hidden</button><button type="button" data-val="show">Shown</button></div></div>
       <div class="ctl"><span class="ctl-label">Bots</span>
@@ -542,7 +550,7 @@ const store = {
 };
 const blankStats = () => ({ hands: 0, net: 0, decisions: 0, good: 0, ok: 0, bad: 0, leak: 0, spots: {} });
 const saved = store.get() || {};
-const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on', style: 'friendly' }, saved.settings || {});
+const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on', style: 'friendly', carry: 'on' }, saved.settings || {});
 let stats = Object.assign(blankStats(), saved.stats || {});
 let log = Array.isArray(saved.log) ? saved.log : [];
 let redo = Array.isArray(saved.redo) ? saved.redo : []; // missed spots saved for replay
@@ -654,11 +662,16 @@ function setupHand(){
   const n = table.n, button = S && S.n === n ? (S.button + 1) % n : Math.floor(Math.random() * n);
   const deck = shuffle([...Array(52).keys()]), names = posNames(n), buy = settings.stack;
   const pl = [];
-  for (let i = 0; i < n; i++) pl.push({ i, name: table.names[i], prof: i === 0 ? null : PROFILES[table.keys[i]], stack: buy, bet: 0, total: 0, folded: false, allIn: false,
+  // chips carry over between hands (if on); anyone under $1 rebuys for the full buy-in
+  const carry = settings.carry === 'on' && Array.isArray(table.stacks) && table.stacks.length === n && table.buy === buy;
+  const starts = [], rebuys = [];
+  for (let i = 0; i < n; i++) { let st = carry ? table.stacks[i] : buy; if (st < 5 * BB_C) { if (carry) rebuys.push(i); st = buy; } starts.push(st); }
+  for (let i = 0; i < n; i++) pl.push({ i, name: table.names[i], prof: i === 0 ? null : PROFILES[table.keys[i]], stack: starts[i], bet: 0, total: 0, folded: false, allIn: false,
     acted: false, entered: false, cards: [deck.pop(), deck.pop()], range: newRange(), last: '', pos: names[(i - button + n) % n] });
   S = { id: handNo, n, button, pl, deck, board: [], street: 0, pot: 0, cur: 0, minRaise: BB_C, level: 0, limpers: 0, toAct: -1,
         over: false, showdown: false, hist: [], analysis: null, result: null, heroActed: false, buy, rangeSel: -1, newCards: null, pfr: -1, heroAgg: {}, bets: [] };
-  S.sbI = (button + 1) % n; S.bbI = (button + 2) % n;
+  S.sbI = (button + 1) % n; S.bbI = (button + 2) % n; S.heroStart = pl[0].stack;
+  if (!SIM) for (const i of rebuys) S.hist.push({ st: 0, t: `${i === 0 ? 'You rebuy' : nm(pl[i]) + ' rebuys'} for ${money(buy)}` });
   commit(pl[S.sbI], SB_C); commit(pl[S.bbI], BB_C); S.cur = BB_C;
   S.hist.push({ st: 0, t: `${nm(pl[S.sbI])} post${S.sbI === 0 ? '' : 's'} $0.10, ${nm(pl[S.bbI])} post${S.bbI === 0 ? '' : 's'} $0.20` });
   S.toAct = findNext(S.bbI);
@@ -819,8 +832,9 @@ function endHand(){
   if (SIM) { S.over = true; return; }
   clearTimeout(timer);
   S.over = true; S.toAct = -1; S.analysis = null;
-  S.net = S.pl[0].stack - S.buy;
+  S.net = S.pl[0].stack - (S.heroStart ?? S.buy);
   if (!S.counted) { S.counted = true; stats.hands++; stats.net += S.net; }
+  if (!S.practice && table.n === S.n) { table.stacks = S.pl.map(p => p.stack); table.buy = S.buy; }
   if (!S.practice && !S.hudDone && table.hud && table.n === S.n) {
     S.hudDone = true;
     for (const p of S.pl) { if (p.i === 0) continue; const h = table.hud[p.i]; h.h++; if (p.vp) h.vpip++; if (p.pr) h.pfr++; }
@@ -831,7 +845,7 @@ function endHand(){
 }
 function skipHand(){
   // hero already folded: their result is final, so count it and move on
-  if (!S.over && !S.counted && !S.practice) { S.counted = true; stats.hands++; stats.net += S.pl[0].stack - S.buy; save(); }
+  if (!S.over && !S.counted && !S.practice) { S.counted = true; stats.hands++; stats.net += S.pl[0].stack - (S.heroStart ?? S.buy); save(); }
   newHand();
 }
 function nextTurn(){
@@ -1350,6 +1364,13 @@ function meterHTML(p){
   const bars = Array.from({ length: S.n }, (_, k) => `<i${k <= off ? ' class="on"' : ''}></i>`).join('');
   return `<span class="meter" role="img" aria-label="Acts ${ORD[off]} of ${S.n} after the flop" title="Acts ${ORD[off]} of ${S.n} after the flop">${bars}</span>`;
 }
+// chip stack beside the dollar amount: about 8 chips for a full buy-in, more when ahead, fewer as they bet
+function stackHTML(p){
+  const n = p.stack <= 0 ? 0 : Math.max(1, Math.min(11, Math.round(p.stack / S.buy * 8)));
+  let h = '';
+  for (let k = 0; k < n; k++) h += `<i style="bottom:${(k * 1.9).toFixed(1)}px${k >= 8 ? ';--c:#43CC88' : ''}"></i>`;
+  return `<span class="stk" aria-hidden="true" style="height:${(Math.max(n, 1) - 1) * 1.9 + 4.5}px">${h}</span>`;
+}
 const posPill = pos => { const c = POS_CLS[pos] || 'mid'; return `<span class="pos ${c}" title="${POS_TIP[c]}">${pos}</span>`; };
 // avatar colors follow the seat, not the player type, so they never give a type away
 const AVC = ['#3D6F92','#7B5E9C','#9B6A3C','#4D7F5E','#94505F','#4F62A0'];
@@ -1360,7 +1381,7 @@ function seatHTML(p){
   const shown = settings.labels === 'show' && p.i !== 0;
   const label = p.i === 0 ? 'You' : shown ? `<span class="tag-${p.prof.key}">${pname(p)}</span>` : pname(p);
   const av = p.i === 0 ? 'var(--accent)' : AVC[(p.i - 1) % AVC.length], ini = p.i === 0 ? 'Y' : pname(p).charAt(0);
-  const plate = `<div class="plate">${p.i === S.button ? '<span class="dbtn" title="Dealer button: this seat acts last after the flop">D</span>' : ''}<span class="av" style="--av:${av}" aria-hidden="true">${ini}</span><div class="pinfo"><div class="pn">${label}</div><div class="pm">${posPill(p.pos)}<b>${money(p.stack)}</b></div>${meterHTML(p)}${shown ? `<div class="hud tag-${p.prof.key}">${p.prof.name}</div>` : p.i !== 0 ? hudLine(p) : ''}</div></div>`;
+  const plate = `<div class="plate">${p.i === S.button ? '<span class="dbtn" title="Dealer button: this seat acts last after the flop">D</span>' : ''}<span class="av" style="--av:${av}" aria-hidden="true">${ini}</span><div class="pinfo"><div class="pn">${label}</div><div class="pm">${posPill(p.pos)}<span class="sm">${stackHTML(p)}<b>${money(p.stack)}</b></span></div>${meterHTML(p)}${shown ? `<div class="hud tag-${p.prof.key}">${p.prof.name}</div>` : p.i !== 0 ? hudLine(p) : ''}</div></div>`;
   let tag = '';
   if (S.over && S.showdown && !p.folded && p.i !== 0) tag = describe(S.result.vals[p.i]);
   else if (S.practiceDone && !p.folded && p.i !== 0) tag = S.board.length ? describe(evalHand([...p.cards, ...S.board])) : cap(handWords(cellOf(...p.cards)));
@@ -1660,7 +1681,7 @@ const WORDS = `<dl class="gloss">
   <dt>Implied odds</dt><dd>Extra money you expect to win later when you hit. Players who don't fold top pair give you big implied odds with draws and small pairs.</dd>
   <dt>Semi-bluff</dt><dd>Betting a draw. It can win if they fold now or if you hit later. It doesn't work against players who never fold.</dd>
 </dl>
-<p class="note">How the coach decides: it starts from the tight-aggressive rules of the BlackRain79 cheat sheet (play about the top 20% of hands, raise when first in, fast-play big hands) and adjusts them for a passive home game where people limp a lot, check and call, and bluff only here and there. Raise bigger (4 big blinds plus 1 per limper). Limp behind with small pairs and suited hands. Bet your top pairs yourself, because nobody will bet for you. Never bluff players who call everything. When a passive player raises, believe them. When they bet the turn or river, they usually have it, so call with one pair only when the price is right. Every bet comes with a size. Picking the right move with a size that is way off gets graded "Fine" instead of "Good". The win percentages come from thousands of practice deals against what each player might hold. Everyone's chips are topped back up each hand.</p>`;
+<p class="note">How the coach decides: it starts from the tight-aggressive rules of the BlackRain79 cheat sheet (play about the top 20% of hands, raise when first in, fast-play big hands) and adjusts them for a passive home game where people limp a lot, check and call, and bluff only here and there. Raise bigger (4 big blinds plus 1 per limper). Limp behind with small pairs and suited hands. Bet your top pairs yourself, because nobody will bet for you. Never bluff players who call everything. When a passive player raises, believe them. When they bet the turn or river, they usually have it, so call with one pair only when the price is right. Every bet comes with a size. Picking the right move with a size that is way off gets graded "Fine" instead of "Good". The win percentages come from thousands of practice deals against what each player might hold. Chips carry over between hands and anyone under $1 rebuys for the full amount (you can switch to equal stacks every hand under Settings, Stacks).</p>`;
 function renderTabs(){
   for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.tab === ui.tab));
   $('#tabBody').innerHTML = ui.tab === 'range' ? tabRange() : ui.tab === 'history' ? tabHistory() : ui.tab === 'stats' ? tabStats() : WORDS;
