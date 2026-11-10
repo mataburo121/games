@@ -74,6 +74,8 @@ select{background:var(--bg);border:1px solid var(--line);border-radius:9px;paddi
 .pm{display:flex;flex-wrap:wrap;justify-content:center;gap:0 6px;font-size:11px;color:var(--felt-muted);line-height:1.3}
 .pm b{font-family:var(--font-mono);color:var(--felt-ink);font-weight:600}
 @media (max-width:640px){.pn{font-size:11px}.pm{font-size:10px}}
+.hud{font-size:10px;color:var(--felt-muted);line-height:1.25}
+.hud b{font-family:var(--font-mono);color:var(--felt-ink);font-weight:600}
 .tag-reg{color:var(--t-reg)} .tag-rock{color:var(--t-rock)} .tag-maniac{color:var(--t-maniac)} .tag-station{color:var(--t-station)}
 .dealer{width:16px;height:16px;flex:none;border-radius:50%;background:var(--card);color:var(--card-ink);font:700 10px/16px var(--font-display);text-align:center}
 .made{font-family:var(--font-display);font-weight:600;font-size:12px;color:var(--felt-ink);background:var(--plate);border-radius:6px;padding:0 7px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
@@ -174,6 +176,18 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:4
 .gloss dd{margin:0;color:var(--muted)}
 @media (max-width:480px){.gloss{grid-template-columns:minmax(0,1fr);gap:2px}.gloss dd{margin-bottom:8px}}
 .note{font-size:12px;color:var(--muted);margin:14px 0 0;max-width:70ch}
+.brk{flex-basis:100%;height:0;border-top:1px solid var(--line)}
+.pill.drill{background:color-mix(in srgb,var(--accent) 16%,transparent);color:var(--accent)}
+.sub{margin:18px 0 6px;font:700 12px var(--font-display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.spots{width:100%;border-collapse:collapse;font-size:13px}
+.spots th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:600;text-align:right;padding:4px;border-bottom:1px solid var(--line)}
+.spots td{padding:6px 4px;border-bottom:1px solid var(--line);text-align:right;font:600 12px var(--font-mono);font-variant-numeric:tabular-nums}
+.spots th:first-child,.spots td:first-child{text-align:left}
+.spots td:first-child{font:500 13px var(--font-body)}
+.spots .good{color:var(--good)} .spots .ok{color:var(--ok)} .spots .bad{color:var(--bad)}
+.leakline{margin:0 0 8px;font-size:13.5px}
+.smallbtn{border:1px solid var(--line);background:transparent;border-radius:7px;padding:2px 8px;font:600 12px var(--font-body);cursor:pointer;color:var(--accent);white-space:nowrap}
+.redobox{margin-top:14px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;display:flex;gap:8px 12px;align-items:center;justify-content:space-between;flex-wrap:wrap;font-size:13px}
 </style>
 
 <div class="app">
@@ -193,6 +207,17 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:4
         <button type="button" id="mode-hints" data-mode="hints">Hints on</button>
         <button type="button" id="mode-quiz" data-mode="quiz">Quiz me</button>
       </div></div>
+    <div class="brk" aria-hidden="true"></div>
+    <div class="ctl"><label class="ctl-label" for="drill">Drill</label>
+      <select id="drill"></select></div>
+    <div class="ctl"><span class="ctl-label">Redo mistakes</span>
+      <div class="seg" data-key="redo" role="group" aria-label="Redo mistakes"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
+    <div class="ctl"><span class="ctl-label">Stats by spot</span>
+      <div class="seg" data-key="bySpot" role="group" aria-label="Stats by situation"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
+    <div class="ctl"><span class="ctl-label">Player types</span>
+      <div class="seg" data-key="labels" role="group" aria-label="Player type labels"><button type="button" data-val="hide">Hidden</button><button type="button" data-val="show">Shown</button></div></div>
+    <div class="ctl"><span class="ctl-label">Bots</span>
+      <div class="seg" data-key="speed" role="group" aria-label="Bot speed"><button type="button" data-val="normal">Normal</button><button type="button" data-val="fast">Fast</button></div></div>
   </div>
 
   <main class="grid">
@@ -329,10 +354,10 @@ function norm(R){ let m = 0; for (let i = 0; i < 1326; i++) if (R[i] > m) m = R[
 function removeCards(R, cards){ for (let i = 0; i < 1326; i++) { const [a, b] = COMBOS[i]; if (cards.indexOf(a) >= 0 || cards.indexOf(b) >= 0) R[i] = 0; } }
 
 const PROFILES = {
-  reg:     { key: 'reg',     name: 'Solid',   blurb: 'One of the better players here. Raises good hands but limps some too, bets when ahead and bluffs now and then.', open: .30, limp: .18, defend: .30, threebet: .05, bluff: .08, aggr: .5, loose: .02, value: .4, callFrac: .6 },
-  rock:    { key: 'rock',    name: 'Rock',    blurb: 'Tight and passive. Limps or folds most hands. A raise from them means a big hand; their turn and river bets are rarely bluffs.', open: .14, limp: .16, defend: .14, threebet: .03, bluff: .035, aggr: .3, loose: -.04, value: .25, callFrac: .4 },
-  maniac:  { key: 'maniac',  name: 'Maniac',  blurb: 'The one wild player. Raises and bluffs far too often. Call down lighter against them.', open: .70, limp: .20, defend: .50, threebet: .18, bluff: .25, aggr: .85, loose: .05,  value: .6,  callFrac: .7 },
-  station: { key: 'station', name: 'Station', blurb: 'Limps and calls with almost anything, all the way to the river. Mostly bets real hands, with the odd bluff when everyone checks. Value bet, never bluff them.', open: .07, limp: .72, defend: .6, threebet: .025, bluff: .05, aggr: .18, loose: .12,  value: .25, callFrac: .92 }
+  reg:     { key: 'reg',     name: 'Solid',   blurb: 'One of the better players here. Raises good hands but limps some too, bets when ahead and bluffs now and then.', open: .32, limp: .10, defend: .30, threebet: .05, bluff: .08, aggr: .5, loose: .02, value: .4, callFrac: .6 },
+  rock:    { key: 'rock',    name: 'Rock',    blurb: 'Tight and passive. Limps or folds most hands. A raise from them means a big hand; their turn and river bets are rarely bluffs.', open: .14, limp: .19, defend: .14, threebet: .03, bluff: .035, aggr: .3, loose: -.04, value: .25, callFrac: .4 },
+  maniac:  { key: 'maniac',  name: 'Maniac',  blurb: 'The one wild player. Raises and bluffs far too often. Call down lighter against them.', open: .70, limp: .14, defend: .50, threebet: .18, bluff: .25, aggr: .85, loose: .05,  value: .6,  callFrac: .7 },
+  station: { key: 'station', name: 'Station', blurb: 'Limps and calls with almost anything, all the way to the river. Mostly bets real hands, with the odd bluff when everyone checks. Value bet, never bluff them.', open: .14, limp: .42, defend: .6, threebet: .03, bluff: .05, aggr: .18, loose: .12,  value: .25, callFrac: .92 }
 };
 // your game: lots of limping, check-calling and a few bluffs here and there
 const HOME_MIX = [['station', .45], ['rock', .25], ['reg', .2], ['maniac', .1]];
@@ -341,7 +366,7 @@ const POSF = [1, 1.15, 1, 0.75, 0.6, 0.5, 0.43]; // opening-range scale by playe
 function preThresholds(P, ctx, tc, pot){
   const pf = POSF[Math.min(ctx.behind, 6)];
   if (ctx.kind === 'unopened') { const raise = P.open * pf; return { raise, cont: Math.max(raise, P.limp * Math.min(1.2, pf + 0.2)) }; }
-  if (ctx.kind === 'limped') { const raise = P.open * 0.5 * pf; return { raise, cont: Math.max(raise, P.limp * 1.2 + 0.05) }; }
+  if (ctx.kind === 'limped') { const raise = P.open * 0.5 * pf; return { raise, cont: Math.max(raise, P.limp * 1.05 + 0.04) }; }
   if (ctx.kind === 'bbOption') return { raise: P.threebet * 1.5, cont: 1 };
   const req = tc / (pot + tc), sizeF = Math.min(1, Math.max(0.12, (0.62 - req) / 0.32)), L = ctx.level;
   const lvlF = L <= 1 ? 1 : L === 2 ? 0.38 : 0.18, rF = L <= 1 ? 1 : L === 2 ? 0.45 : 0.3;
@@ -428,14 +453,41 @@ const store = {
   get(){ try { return JSON.parse(localStorage.getItem(KEY)) || null; } catch (e) { return null; } },
   set(v){ try { localStorage.setItem(KEY, JSON.stringify(v)); } catch (e) {} }
 };
-const blankStats = () => ({ hands: 0, net: 0, decisions: 0, good: 0, ok: 0, bad: 0, leak: 0 });
+const blankStats = () => ({ hands: 0, net: 0, decisions: 0, good: 0, ok: 0, bad: 0, leak: 0, spots: {} });
 const saved = store.get() || {};
-const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home' }, saved.settings || {});
+const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide' }, saved.settings || {});
 let stats = Object.assign(blankStats(), saved.stats || {});
 let log = Array.isArray(saved.log) ? saved.log : [];
+let redo = Array.isArray(saved.redo) ? saved.redo : []; // missed spots saved for replay
 let handNo = saved.handNo || 0;
 let table = saved.table && saved.table.v === 2 && saved.table.n === settings.players && saved.table.mix === settings.mix ? saved.table : null;
-function save(){ store.set({ settings, stats, log: log.slice(0, 40), handNo, table }); }
+function save(){ store.set({ settings, stats, log: log.slice(0, 40), handNo, table, redo: redo.slice(0, REDO_MAX) }); }
+
+// ---------- practice: situations, drills, redo ----------
+const SPOTS = {
+  open: 'First in, before the flop',
+  limped: 'After limpers, before the flop',
+  vsraise: 'Facing a raise, before the flop',
+  vs3bet: 'Facing a re-raise, before the flop',
+  bb: 'Big blind, nobody raised',
+  value: 'Strong hand or top pair, no bet yet',
+  weak: 'Weak hand or draw, no bet yet',
+  facestrong: 'Strong hand, facing a bet',
+  facepair: 'One pair, facing a bet',
+  facedraw: 'Draw or nothing, facing a bet'
+};
+const DRILLABLE = Object.keys(SPOTS).filter(k => k !== 'bb');
+const REDO_MAX = 25, REDO_CLEAR = 2;
+let SIM = null; // set while fast-forwarding hidden hands to find a drill spot
+const spotScore = sp => { if (!sp || !sp.r) return null; let v = 0; for (const ch of sp.r) v += ch === 'g' ? 1 : ch === 'o' ? 0.5 : 0; return v / sp.r.length; };
+function weakestSpot(minN){
+  let best = null, bs = 2;
+  for (const k of DRILLABLE) { const sp = stats.spots[k]; if (!sp || sp.r.length < minN) continue; const sc = spotScore(sp); if (sc < bs) { bs = sc; best = k; } }
+  return best;
+}
+// range weights packed into one byte each (log scale) so saved spots stay small
+function encR(R){ let o = ''; for (let i = 0; i < 1326; i++) { const v = R[i]; o += String.fromCharCode(v <= 0 ? 0 : Math.max(1, Math.min(255, Math.round(255 + 42 * Math.log10(v))))); } return btoa(o); }
+function decR(str){ const b = atob(str), R = new Float64Array(1326); for (let i = 0; i < 1326; i++) { const x = b.charCodeAt(i); R[i] = x === 0 ? 0 : Math.pow(10, (x - 255) / 42); } return R; }
 
 // ---------- helpers ----------
 let S = null, timer = null;
@@ -444,7 +496,8 @@ const money = c => '$' + (c / 100).toFixed(2);
 const pct = x => Math.round(x * 100) + '%';
 const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
 function shuffle(a){ for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
-const nm = p => p.i === 0 ? 'You' : `${p.prof.name} (${p.pos})`;
+const pname = p => p.name || p.prof.name;
+const nm = p => p.i === 0 ? 'You' : `${pname(p)}${settings.labels === 'show' ? ', ' + p.prof.name.toLowerCase() : ''} (${p.pos})`;
 const alive = () => S.pl.filter(p => !p.folded);
 function commit(p, x){ x = Math.min(x, p.stack); p.stack -= x; p.bet += x; p.total += x; if (p.stack === 0) p.allIn = true; }
 const toCall = p => Math.min(S.cur - p.bet, p.stack);
@@ -483,6 +536,12 @@ function posNames(n){
 }
 
 // ---------- game engine ----------
+const NAMES = ['Alex','Sam','Jordan','Casey','Riley','Morgan','Jamie','Drew','Quinn','Avery','Rowan','Sky'];
+const blankHud = () => ({ h: 0, vpip: 0, pfr: 0, post: 0, agg: 0 });
+function fillSeats(){
+  if (!table.names) { const pool = shuffle(NAMES.slice()); table.names = ['You', ...pool.slice(0, table.n - 1)]; }
+  if (!table.hud || table.hud.length !== table.n) table.hud = Array.from({ length: table.n }, blankHud);
+}
 function seatTable(){
   const keys = [null];
   for (let i = 1; i < settings.players; i++) {
@@ -492,15 +551,23 @@ function seatTable(){
     keys.push(k);
   }
   table = { v: 2, n: settings.players, mix: settings.mix, keys };
+  fillSeats();
 }
 function newHand(){
-  clearTimeout(timer);
+  clearTimeout(timer); SIM = null;
+  // replay a missed spot when one is due, but never two in a row
+  if (settings.redo === 'on' && !(S && S.practice === 'redo')) { const it = dueRedo(); if (it) return startRedo(it); }
+  if (settings.drill !== 'off') return startDrill();
+  setupHand(); nextTurn();
+}
+function setupHand(){
   if (!table || table.n !== settings.players || table.mix !== settings.mix) seatTable();
+  fillSeats();
   handNo++;
   const n = table.n, button = S && S.n === n ? (S.button + 1) % n : Math.floor(Math.random() * n);
   const deck = shuffle([...Array(52).keys()]), names = posNames(n), buy = settings.stack;
   const pl = [];
-  for (let i = 0; i < n; i++) pl.push({ i, prof: i === 0 ? null : PROFILES[table.keys[i]], stack: buy, bet: 0, total: 0, folded: false, allIn: false,
+  for (let i = 0; i < n; i++) pl.push({ i, name: table.names[i], prof: i === 0 ? null : PROFILES[table.keys[i]], stack: buy, bet: 0, total: 0, folded: false, allIn: false,
     acted: false, entered: false, cards: [deck.pop(), deck.pop()], range: newRange(), last: '', pos: names[(i - button + n) % n] });
   S = { id: handNo, n, button, pl, deck, board: [], street: 0, pot: 0, cur: 0, minRaise: BB_C, level: 0, limpers: 0, toAct: -1,
         over: false, showdown: false, hist: [], analysis: null, result: null, heroActed: false, buy, rangeSel: -1, newCards: null, pfr: -1, heroAgg: {}, bets: [] };
@@ -508,8 +575,66 @@ function newHand(){
   commit(pl[S.sbI], SB_C); commit(pl[S.bbI], BB_C); S.cur = BB_C;
   S.hist.push({ st: 0, t: `${nm(pl[S.sbI])} post${S.sbI === 0 ? '' : 's'} $0.10, ${nm(pl[S.bbI])} post${S.bbI === 0 ? '' : 's'} $0.20` });
   S.toAct = findNext(S.bbI);
+  if (!SIM) save();
+}
+function dueRedo(){
+  let pick = null;
+  for (const it of redo) if (it.due <= handNo && (!pick || it.due < pick.due)) pick = it;
+  return pick;
+}
+function snapshot(){
+  const keep = ['n','button','deck','board','street','pot','cur','minRaise','level','limpers','buy','pfr','heroAgg','bets','sbI','bbI'], o = {};
+  for (const k of keep) o[k] = JSON.parse(JSON.stringify(S[k]));
+  o.aggressor = S.aggressor == null ? -1 : S.aggressor;
+  o.hist = S.hist.map(h => ({ st: h.st, t: h.t }));
+  o.pl = S.pl.map(p => ({ i: p.i, k: p.prof ? p.prof.key : null, stack: p.stack, bet: p.bet, total: p.total, folded: p.folded, allIn: p.allIn, acted: p.acted,
+    entered: p.entered, cards: p.cards.slice(), last: p.last, pos: p.pos, name: p.name, r: p.i !== 0 && !p.folded ? encR(p.range) : '' }));
+  return o;
+}
+function startRedo(it){
+  clearTimeout(timer); SIM = null;
+  const z = it.snap;
+  S = Object.assign({}, z, { id: ++handNo, toAct: 0, over: false, showdown: false, analysis: null, result: null, heroActed: false, rangeSel: -1, newCards: null,
+    practice: 'redo', redoKey: it.key, deck: shuffle(z.deck.slice()), hist: z.hist.map(h => ({ st: h.st, t: h.t })), heroAgg: Object.assign({}, z.heroAgg), bets: z.bets.slice(),
+    pl: z.pl.map(p => Object.assign({}, p, { prof: p.k ? PROFILES[p.k] : null, range: p.r ? decR(p.r) : newRange(), cards: p.cards.slice() })) });
+  it.due = handNo + 3; // pushed back in case this one is abandoned
   save();
   nextTurn();
+}
+function drillTarget(){
+  if (settings.drill !== 'auto') return settings.drill;
+  return weakestSpot(5) || ['open','limped','vsraise','value','facepair','weak'][Math.floor(Math.random() * 6)];
+}
+function startDrill(){
+  const target = drillTarget(), h0 = handNo, t0 = performance.now();
+  SIM = { target, found: false, tries: 0 };
+  const chunk = () => {
+    if (!SIM) return;
+    const c0 = performance.now();
+    while (performance.now() - c0 < 50) {
+      SIM.tries++;
+      setupHand(); nextTurn();
+      if (SIM.found) {
+        SIM = null; handNo = h0 + 1; S.id = handNo; S.practice = 'drill'; S.drillSpot = target; ui.drillN++;
+        S.analysis = analyze(); save(); render(); return;
+      }
+      if (performance.now() - t0 > 6000) {
+        SIM = null; handNo = h0; setupHand();
+        S.notice = `Couldn't find a "${SPOTS[target]}" spot quickly, so here is a normal hand.`;
+        nextTurn(); return;
+      }
+    }
+    showSearching(target);
+    timer = setTimeout(chunk, 0);
+  };
+  chunk();
+}
+function heroAuto(){
+  // play your earlier decisions in a drill hand the way the coach would
+  const A = S.analysis, me = S.pl[0];
+  const type = ORDER.find(k => A.good.has(k)) || (toCall(me) > 0 ? 'fold' : 'check');
+  if (type === 'raise') return act(0, 'raise', A.size || clampTo(me, S.cur ? S.cur * 3 : potTotal() * 0.66));
+  act(0, type);
 }
 function updateRange(p, type, ctx, tc, pot){
   const P = p.i === 0 ? PROFILES.reg : p.prof;
@@ -519,6 +644,10 @@ function updateRange(p, type, ctx, tc, pot){
 function act(i, type, to){
   const p = S.pl[i], tc = toCall(p), pot = potTotal(), ctx = preCtx(p), cur = S.cur;
   if (type !== 'fold') updateRange(p, type, ctx, tc, pot);
+  if (i !== 0 && !SIM && !S.practice) {
+    if (S.street === 0) { if (type === 'call' || type === 'raise') p.vp = true; if (type === 'raise') p.pr = true; }
+    else if (type !== 'fold') { const h = table.hud[i]; if (h) { h.post++; if (type === 'raise') h.agg++; } }
+  }
   let base, third;
   if (type === 'fold') { p.folded = true; base = 'fold'; third = 'folds'; }
   else if (type === 'check') { base = 'check'; third = 'checks'; }
@@ -560,16 +689,18 @@ function endStreet(){
   S.cur = 0; S.minRaise = BB_C; S.level = 0; S.aggressor = -1;
   if (S.street === 3) return showdown();
   if (S.pl.filter(p => !p.folded && !p.allIn).length < 2) {
+    if (SIM) { S.simDead = true; return; }
     S.toAct = -1; S.allin = true; S.analysis = null;
     if (S.pl[0].folded) { while (S.street < 3) deal(); return showdown(); }
-    render(); timer = setTimeout(runout, 650); return;
+    render(); timer = setTimeout(runout, delay(650)); return;
   }
   for (const p of S.pl) if (!p.folded) p.last = '';
   deal();
   S.toAct = findNext(S.button);
   nextTurn();
 }
-function runout(){ deal(); render(); timer = setTimeout(S.street < 3 ? runout : showdown, 750); }
+const delay = ms => settings.speed === 'fast' ? Math.round(ms / 3.5) : ms;
+function runout(){ deal(); render(); timer = setTimeout(S.street < 3 ? runout : showdown, delay(750)); }
 function showdown(){
   const live = alive(), vals = {};
   for (const p of live) vals[p.i] = evalHand([...p.cards, ...S.board]);
@@ -597,23 +728,35 @@ function finishFold(w){
   endHand();
 }
 function endHand(){
+  if (SIM) { S.over = true; return; }
   clearTimeout(timer);
   S.over = true; S.toAct = -1; S.analysis = null;
   S.net = S.pl[0].stack - S.buy;
   if (!S.counted) { S.counted = true; stats.hands++; stats.net += S.net; }
+  if (!S.practice && !S.hudDone && table.hud && table.n === S.n) {
+    S.hudDone = true;
+    for (const p of S.pl) { if (p.i === 0) continue; const h = table.hud[p.i]; h.h++; if (p.vp) h.vpip++; if (p.pr) h.pfr++; }
+  }
   save(); render();
 }
 function skipHand(){
   // hero already folded: their result is final, so count it and move on
-  if (!S.over && !S.counted) { S.counted = true; stats.hands++; stats.net += S.pl[0].stack - S.buy; save(); }
+  if (!S.over && !S.counted && !S.practice) { S.counted = true; stats.hands++; stats.net += S.pl[0].stack - S.buy; save(); }
   newHand();
 }
 function nextTurn(){
+  if (SIM) {
+    if (S.pl[0].folded) { S.simDead = true; return; }
+    if (S.toAct !== 0) { botMove(); return; }
+    S.analysis = analyze(300);
+    if (S.analysis.spot === SIM.target) { SIM.found = true; return; }
+    heroAuto(); return;
+  }
   if (S.toAct === 0) { S.analysis = analyze(); render(); return; }
   // once you have folded, finish the hand instantly and just show who won
   if (S.pl[0].folded) { botMove(); return; }
   S.analysis = null; render();
-  timer = setTimeout(botMove, 600);
+  timer = setTimeout(botMove, delay(600));
 }
 
 // ---------- bots ----------
@@ -655,12 +798,18 @@ function botPost(p){
     if (frac && cr) return { type: 'raise', to: clampTo(p, frac * pot) };
     return { type: 'check' };
   }
-  const req = tc / (pot + tc), strongT = n === 1 ? 0.78 : 0.62;
-  if (cr && eq > strongT && r < 0.3 + P.aggr * 0.5) return { type: 'raise', to: clampTo(p, S.cur + 0.7 * (pot + tc)) };
+  const req = tc / (pot + tc), strongT = n === 1 ? 0.7 : 0.55;
+  const raiseTo = () => clampTo(p, S.cur + (0.6 + Math.random() * 0.3) * (pot + tc));
+  if (cr && eq > strongT && r < 0.4 + P.aggr * 0.5) return { type: 'raise', to: raiseTo() };
+  // two pair or better made with their own cards: raise a fair share of the time, even passive players
+  const made = Math.floor(evalHand([...p.cards, ...S.board]) / B5), boardMade = Math.floor(evalHand(S.board) / B5);
+  if (cr && made >= 2 && made > boardMade && r < 0.2 + P.aggr * 0.4) return { type: 'raise', to: raiseTo() };
+  // the odd raise with a big draw before the river
+  if (cr && st < 3 && isDrawy(p.cards[0], p.cards[1], S.board) && Math.random() < 0.05 + P.aggr * 0.18) return { type: 'raise', to: raiseTo() };
   if (eq >= req - P.loose - (st < 3 ? 0.04 : 0)) return { type: 'call' };
   // calling stations hang on with any pair they made using their own cards
   if (P.key === 'station' && req < 0.42 && Math.floor(evalHand([...p.cards, ...S.board]) / B5) > Math.floor(evalHand(S.board) / B5)) return { type: 'call' };
-  if (cr && st < 3 && n === 1 && r < P.bluff * bf * 0.25) return { type: 'raise', to: clampTo(p, S.cur + 0.7 * (pot + tc)) };
+  if (cr && st < 3 && n === 1 && r < P.bluff * bf * 0.25) return { type: 'raise', to: raiseTo() };
   return { type: 'fold' };
 }
 
@@ -725,12 +874,12 @@ function handClass(hole, board){
   return { kind, draw, hi: h[0], label: names[kind] + (draw ? dn[draw] : '') };
 }
 
-function analyze(){
+function analyze(iters){
   const me = S.pl[0], tc = toCall(me), pot = potTotal(), cr = canRaise(me), st = S.street, ctx = preCtx(me);
   let opps = S.pl.filter(o => o.i !== 0 && !o.folded && o.entered);
   if (!opps.length && st > 0) opps = alive().filter(o => o.i !== 0);
   const n = opps.length;
-  const eq = (ctx && ctx.kind === 'unopened') || !n ? null : equityMulti(me.cards, S.board, opps.map(o => o.range), 2000);
+  const eq = (ctx && ctx.kind === 'unopened') || !n ? null : equityMulti(me.cards, S.board, opps.map(o => o.range), iters || 2000);
   const ip = alive().every(o => o.i === 0 || offset(o.i) < offset(0));
   const allin = tc >= me.stack || opps.every(o => o.allIn);
   const real = (st === 3 || allin) ? 1 : (ip ? 0.95 : 0.87);
@@ -746,11 +895,12 @@ function analyze(){
   const fit = v => rb ? Math.max(rb.min, Math.min(rb.max, r10(v))) : null;
   const potFrac = fr => fit(S.cur + fr * (pot + tc));
   const M = v => v != null ? money(v) : 'all-in';
-  let label = '', rule = '', why = '', size = null, sizeWhy = '';
+  let label = '', rule = '', why = '', size = null, sizeWhy = '', spot = '';
 
   if (st === 0) {
     const cell = cellOf(...me.cards), nc = cellName(cell), p = PCT[cell], hw = cap(handWords(cell));
     const isAAKK = nc === 'AA' || nc === 'KK', L = S.limpers;
+    spot = ctx.kind === 'unopened' ? 'open' : ctx.kind === 'limped' ? 'limped' : ctx.kind === 'bbOption' ? 'bb' : (S.level >= 2 || tc >= me.stack * 0.35) ? 'vs3bet' : 'vsraise';
     if (ctx.kind === 'unopened') {
       const openT = OPEN_BY_BEHIND[Math.min(ctx.behind, 6)];
       const seatWhy = `Play tight: about the top 20% of hands at a 6-player table, more from the Dealer and Late seats (you act last after the flop) and fewer from early seats. From your seat that is roughly the best ${pct(openT)}.`;
@@ -846,6 +996,7 @@ function analyze(){
     const wet = boardWet(S.board), stName = STREET[st].toLowerCase();
     const foldy = n === 1 && (kinds[0] === 'rock' || kinds[0] === 'reg');
     label = H.label;
+    spot = tc === 0 ? (strong || tp ? 'value' : 'weak') : strong ? 'facestrong' : tp || mid ? 'facepair' : 'facedraw';
     if (tc === 0) {
       if (strong) {
         const fr = st === 3 && station && H.kind === 'monster' ? 1 : (station || wet) ? 0.75 : 0.66;
@@ -968,7 +1119,7 @@ function analyze(){
   if (eq != null) why += req != null ? ` By the numbers, you win about ${pct(eqR)} and a call needs ${pct(req)}.` : ` By the numbers, you win about ${pct(eq)}${n > 1 ? ` against ${n} players` : ''}.`;
   const evCall = tc > 0 && eqR != null ? eqR * (pot + tc) - tc : null;
   const sizeLabel = size != null ? `${S.cur > 0 ? 'Raise to' : 'Bet'} ${money(size)}` : null;
-  return { good, ok, why, short: `${label}. ${rule}`, eq: shown, eqR, req, evCall, tc, pot, n, size, sizeLabel, sizeWhy };
+  return { good, ok, why, short: `${label}. ${rule}`, eq: shown, eqR, req, evCall, tc, pot, n, size, sizeLabel, sizeWhy, spot };
 }
 const actName = (k, tc) => ({ fold: 'Fold', check: 'Check', call: 'Call', raise: tc > 0 ? 'Raise' : 'Bet' })[k];
 const ORDER = ['raise', 'call', 'check', 'fold'];
@@ -985,11 +1136,34 @@ function heroAct(type, to){
   let loss = 0;
   if (g === 'bad' && A.evCall != null) loss = Math.round(type === 'fold' ? Math.max(0, A.evCall) : Math.max(0, -A.evCall));
   const youLabel = type === 'raise' ? `${actName('raise', A.tc)}${S.cur > 0 ? ' to' : ''} ${money(to)}` : type === 'call' ? `Call ${money(A.tc)}` : actName(type, A.tc);
+  // redo queue: save new mistakes, track progress on replayed ones
+  let note = '';
+  if (S.redoKey) {
+    const k = redo.findIndex(x => x.key === S.redoKey), it = redo[k];
+    if (it) {
+      if (g === 'good') { it.streak++; if (it.streak >= REDO_CLEAR) { redo.splice(k, 1); note = 'Cleared from your redo list.'; } else { it.due = handNo + 4; note = `${REDO_CLEAR - it.streak} more right to clear it.`; } }
+      else { it.streak = 0; it.due = handNo + 2; note = 'Still on your redo list. It will come back soon.'; }
+    }
+  } else if (g === 'bad' && A.spot) {
+    redo.unshift({ key: `${Date.now()}-${S.id}`, snap: snapshot(), spot: A.spot, hand: me.cards.slice(), board: S.board.slice(), streak: 0, due: handNo + 3 });
+    redo = redo.slice(0, REDO_MAX);
+    if (settings.redo === 'on') note = 'Saved to your redo list.';
+  }
   log.unshift({ id: S.id, st: S.street, pos: me.pos, hand: me.cards.slice(), board: S.board.slice(), you: youLabel,
-                best: bestLabel(A), g, loss, why: A.why, short: A.short, n: A.n, sz });
+                best: bestLabel(A), g, loss, why: A.why, short: A.short, n: A.n, sz, spot: A.spot, note });
   log = log.slice(0, 40);
   stats.decisions++; stats[g]++; stats.leak += loss;
+  if (A.spot) {
+    const sp = stats.spots[A.spot] || (stats.spots[A.spot] = { n: 0, good: 0, ok: 0, bad: 0, leak: 0, r: '' });
+    sp.n++; sp[g]++; sp.leak += loss; sp.r = (g[0] + sp.r).slice(0, 20);
+  }
   S.heroActed = true;
+  if (S.practice) {
+    // practice spots end after your decision; their cards are turned face up
+    S.hist.push({ st: S.street, t: `You ${youLabel.charAt(0).toLowerCase() + youLabel.slice(1)}` });
+    S.over = true; S.practiceDone = true; S.toAct = -1; S.analysis = null;
+    save(); render(); return;
+  }
   save();
   act(0, type, to);
 }
@@ -998,7 +1172,8 @@ function heroAct(type, to){
 const $ = s => document.querySelector(s);
 const narrow = window.matchMedia('(max-width:640px)');
 const GL = { good: 'Good', ok: 'Fine', bad: 'Mistake' };
-const ui = { tab: 'range', more: false, sizing: false, key: null, amt: null };
+const ui = { tab: 'range', more: false, sizing: false, key: null, amt: null, drillN: 0 };
+const isQuiz = () => settings.mode === 'quiz' || (S && S.practice === 'redo');
 const sm = v => `${v > 0 ? '+' : v < 0 ? '−' : ''}${money(Math.abs(v))}`;
 function cardHTML(c, o = {}){
   if (c == null) return '<div class="card slot" aria-hidden="true"></div>';
@@ -1019,18 +1194,33 @@ function heroMade(){
 }
 function seatHTML(p){
   const active = !S.over && S.toAct === p.i;
-  const show = p.i === 0 || (S.over && S.showdown && !p.folded);
+  const show = p.i === 0 || (S.over && (S.showdown || S.practiceDone) && !p.folded);
   const cards = p.folded && p.i !== 0 ? '' : p.cards.map(c => show ? cardHTML(c) : cardHTML(c, { back: true })).join('');
-  const label = p.i === 0 ? 'You' : `<span class="tag-${p.prof.key}">${p.prof.name}</span>`;
-  const plate = `<div class="plate"><div class="pn">${label}${p.i === S.button ? '<span class="dealer" title="Dealer button">D</span>' : ''}</div><div class="pm"><span>${p.pos}</span><b>${money(p.stack)}</b></div></div>`;
+  const shown = settings.labels === 'show' && p.i !== 0;
+  const label = p.i === 0 ? 'You' : shown ? `<span class="tag-${p.prof.key}">${pname(p)}</span>` : pname(p);
+  const plate = `<div class="plate"><div class="pn">${label}${p.i === S.button ? '<span class="dealer" title="Dealer button">D</span>' : ''}</div><div class="pm"><span>${p.pos}</span><b>${money(p.stack)}</b></div>${shown ? `<div class="hud tag-${p.prof.key}">${p.prof.name}</div>` : p.i !== 0 ? hudLine(p) : ''}</div>`;
   let tag = '';
   if (S.over && S.showdown && !p.folded && p.i !== 0) tag = describe(S.result.vals[p.i]);
+  else if (S.practiceDone && !p.folded && p.i !== 0) tag = S.board.length ? describe(evalHand([...p.cards, ...S.board])) : cap(handWords(cellOf(...p.cards)));
   else if (!p.folded) tag = p.allIn && !S.over ? 'All-in' : p.last;
   const bubble = tag ? `<span class="bubble">${tag}</span>` : '';
   const cls = `seat${p.i === 0 ? ' hero' : ''}${active ? ' active' : ''}${p.folded ? ' folded' : ''}`;
   if (p.i === 0) return `<div class="${cls}" style="left:50%"><div class="cards">${cards}</div><div class="made">${heroMade()}</div>${plate}</div>`;
   const [x, y] = seatXY(p.i, S.n, 1);
-  return `<div class="${cls}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%" title="${p.prof.blurb}"><div class="cards">${cards}</div>${plate}${bubble}</div>`;
+  return `<div class="${cls}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%"${settings.labels === 'show' ? ` title="${p.prof.blurb}"` : ''}><div class="cards">${cards}</div>${plate}${bubble}</div>`;
+}
+const HUD_MIN = 8;
+function hudOf(p){ const h = table && table.n === S.n && table.hud ? table.hud[p.i] : null; return h && h.h ? h : null; }
+function hudLine(p){
+  const h = hudOf(p);
+  if (!h || h.h < HUD_MIN) return `<div class="hud" title="Their numbers show up after ${HUD_MIN} hands">New · ${h ? h.h : 0} hands</div>`;
+  return `<div class="hud" title="Plays: share of hands they put money in before the flop. Raises: share of hands they raised before the flop. ${h.h} hands seen."><b>${pct(h.vpip / h.h)}</b> play · <b>${pct(h.pfr / h.h)}</b> raise</div>`;
+}
+function hudText(p){
+  const h = hudOf(p);
+  if (!h || h.h < HUD_MIN) return `You have only seen ${h ? h.h : 0} hands from ${pname(p)}. Their numbers show up after ${HUD_MIN}.`;
+  const af = h.post >= 5 ? ` After the flop they bet or raise <b>${pct(h.agg / h.post)}</b> of the times they stay in (out of ${h.post} actions).` : '';
+  return `In ${h.h} hands, ${pname(p)} put money in before the flop <b>${pct(h.vpip / h.h)}</b> of the time and raised <b>${pct(h.pfr / h.h)}</b>.${af}`;
 }
 function resultText(){
   const R = S.result;
@@ -1043,7 +1233,9 @@ function resultText(){
 }
 function renderTable(){
   const board = [0,1,2,3,4].map(i => cardHTML(S.board[i], { deal: S.newCards && S.newCards.indexOf(S.board[i]) >= 0 })).join('');
-  const mid = S.over
+  const mid = S.practiceDone
+    ? `<div class="result"><strong>${S.practice === 'redo' ? 'Redo' : 'Drill'} spot done</strong><span class="net">Their cards are face up</span></div>`
+    : S.over
     ? `<div class="result"><strong>${resultText()}</strong><span class="net">You: ${sm(S.net)}</span></div>`
     : `<div class="potline"><span>${STREET[S.street]}</span><span>Pot <b>${money(potTotal())}</b></span></div>`;
   const chips = S.pl.filter(p => p.bet > 0).map(p => {
@@ -1068,7 +1260,7 @@ function presets(){
 function defaultTo(){
   const me = S.pl[0], tc = toCall(me), pot = potTotal(), { min, max } = raiseBounds(me);
   // with hints on, start the slider at the coach's size; in quiz mode, don't give it away
-  if (settings.mode !== 'quiz' && S.analysis && S.analysis.size) return S.analysis.size;
+  if (!isQuiz() && S.analysis && S.analysis.size) return S.analysis.size;
   const v = S.street === 0 ? (S.level === 0 ? (3 + S.limpers) * BB_C : S.cur * 3) : S.cur + 0.66 * (pot + tc);
   return Math.max(min, Math.min(max, r10(v)));
 }
@@ -1076,7 +1268,7 @@ const curAmt = () => ui.amt != null ? ui.amt : defaultTo();
 function raiseText(v){ const { max } = raiseBounds(S.pl[0]); return `${S.cur === 0 ? 'Bet' : 'Raise to'} ${money(v)}${v >= max ? ' (all-in)' : ''}`; }
 function renderActions(){
   const el = $('#actions'), me = S.pl[0];
-  if (S.over) { el.innerHTML = '<button type="button" class="btn primary" id="nextBtn" data-act="next">Deal next hand <kbd>N</kbd></button>'; return; }
+  if (S.over) { el.innerHTML = `<button type="button" class="btn primary" id="nextBtn" data-act="next">${settings.drill !== 'off' ? 'Next drill spot' : 'Deal next hand'} <kbd>N</kbd></button>`; return; }
   if (me.folded) { el.innerHTML = '<button type="button" class="btn primary" id="skipBtn" data-act="skip">Skip to next hand <kbd>N</kbd></button>'; return; }
   if (S.toAct !== 0) { el.innerHTML = `<div class="waiting">${S.allin ? 'All-in. Dealing the rest of the cards…' : `${nm(S.pl[S.toAct])} is deciding…`}</div>`; return; }
   const tc = toCall(me), cr = canRaise(me), v = curAmt();
@@ -1112,16 +1304,16 @@ function minibar(eq, req){
 const moreBtn = () => `<button type="button" class="morebtn" data-more>${ui.more ? 'Less' : 'Why?'}</button>`;
 function feedbackHTML(e, compact){
   const cost = e.loss >= 5 ? `<span class="loss">cost ${money(e.loss)}</span>` : '';
-  const line = `<span class="pill ${e.g}">${GL[e.g]}</span><span>You: <b>${e.you}</b>${e.g !== 'good' ? ` · Best: <b>${e.best}</b>` : ''}</span>${cost}`;
+  const line = `<span class="pill ${e.g}">${GL[e.g]}</span><span>You: <b>${e.you}</b>${e.g !== 'good' ? ` · Best: <b>${e.best}</b>` : ''}</span>${cost}${e.note && !compact ? `<span class="muted">${e.note}</span>` : ''}`;
   if (compact) return `<div class="prev">${line}${e.sz ? `<span class="muted">(bet size ${/too small/.test(e.sz) ? 'too small' : 'too big'})</span>` : ''}</div>`;
   return `<div class="srow">${line}</div>${e.sz ? `<p class="swhy"><b>Bet size:</b> ${e.sz}</p>` : ''}<p class="swhy">${e.short || ''} ${moreBtn()}</p>${ui.more ? `<p class="sfull">${e.why}</p>` : ''}`;
 }
 function renderStrip(){
-  const el = $('#strip'), me = S.pl[0], quiz = settings.mode === 'quiz';
+  const el = $('#strip'), me = S.pl[0], quiz = isQuiz();
   const e = log[0] && log[0].id === S.id ? log[0] : null;
   let html = '', tone = '';
   if (!S.over && S.toAct === 0 && !me.folded) {
-    const prev = e ? feedbackHTML(e, true) : '';
+    const prev = practiceBanner() + (e ? feedbackHTML(e, true) : '');
     const tc = toCall(me);
     if (quiz) {
       html = `${prev}<div><b>Your move.</b> ${tc > 0 ? `It costs ${money(tc)} to call, and the pot is ${money(potTotal())}.` : 'Nobody has bet yet.'} <span class="muted">The coach grades you after you act.</span></div>`;
@@ -1142,6 +1334,18 @@ function renderStrip(){
   }
   el.className = `strip${tone === 'good' || tone === 'bad' ? ' ' + tone : ''}`;
   el.innerHTML = html;
+}
+
+function practiceBanner(){
+  if (S.notice) return `<div class="prev"><span class="muted">${S.notice}</span></div>`;
+  if (S.practice === 'drill') return `<div class="prev"><span class="pill drill">Drill</span><span>${SPOTS[S.drillSpot]}</span><span class="muted">· spot ${ui.drillN}${settings.drill === 'auto' ? ' · your weakest spot' : ''}</span></div>`;
+  if (S.practice === 'redo') return `<div class="prev"><span class="pill drill">Redo</span><span>You missed this spot before. Get it right ${REDO_CLEAR} times in a row to clear it.</span></div>`;
+  return '';
+}
+function showSearching(t){
+  $('#actions').innerHTML = `<div class="waiting">Dealing until you reach a spot: ${SPOTS[t]}…</div>`;
+  $('#strip').className = 'strip';
+  $('#strip').innerHTML = `<div class="prev" style="border:0;margin:0;padding:0"><span class="pill drill">Drill</span><span>${SPOTS[t]}</span></div>`;
 }
 
 // details tabs
@@ -1169,10 +1373,11 @@ function rangeTarget(){
 function tabRange(){
   const tgt = rangeTarget();
   if (!tgt) return '<p class="muted small">Nobody is left in the hand.</p>';
-  if (settings.mode === 'quiz' && !S.over) return '<p class="muted small">Hidden in quiz mode until the hand ends. Try to guess what they have first.</p>';
+  if (isQuiz() && !S.over) return '<p class="muted small">Hidden in quiz mode until the hand ends. Try to guess what they have first.</p>';
   const g = rangeGrid(tgt);
-  const choices = alive().filter(o => o.i !== 0).map(o => `<button type="button" class="chipbtn" data-range="${o.i}" aria-pressed="${o === tgt}">${o.prof.name} · ${o.pos}</button>`).join('');
-  return `<div class="chips">${choices}</div><p class="small" style="margin:0 0 4px"><b>${tgt.prof.name}:</b> ${tgt.prof.blurb}</p><p class="muted small" style="margin:0 0 10px">Darker squares are hands they are more likely to have, based on how they have bet this hand (about ${Math.max(1, Math.round(g.share * 100))}% of all hands). "s" means same suit.</p><div class="rwrap"><div class="rgrid">${g.html}</div></div>`;
+  const choices = alive().filter(o => o.i !== 0).map(o => `<button type="button" class="chipbtn" data-range="${o.i}" aria-pressed="${o === tgt}">${pname(o)} · ${o.pos}</button>`).join('');
+  const about = settings.labels === 'show' ? `<b>${pname(tgt)} (${tgt.prof.name.toLowerCase()}):</b> ${tgt.prof.blurb}` : hudText(tgt);
+  return `<div class="chips">${choices}</div><p class="small" style="margin:0 0 4px">${about}</p><p class="muted small" style="margin:0 0 10px">Darker squares are hands they are more likely to have, based on how they have bet this hand (about ${Math.max(1, Math.round(g.share * 100))}% of all hands). "s" means same suit.</p><div class="rwrap"><div class="rgrid">${g.html}</div></div>`;
 }
 function tabHistory(){
   const rows = [];
@@ -1184,6 +1389,24 @@ function tabHistory(){
   }
   if (S.over && S.showdown) rows.push(`<div class="row"><span class="st">Show</span><span class="txt">${alive().map(p => `${nm(p)} ${minis(p.cards)}`).join(' · ')}</span></div>`);
   return `<p class="muted small" style="margin:0 0 8px">Hand #${S.id}</p><div class="history">${rows.join('')}</div>`;
+}
+function spotsHTML(){
+  if (settings.bySpot !== 'on') return '';
+  const rows = Object.keys(SPOTS).filter(k => stats.spots[k] && stats.spots[k].n).map(k => ({ k, sp: stats.spots[k], sc: spotScore(stats.spots[k]) }));
+  if (!rows.length) return '<p class="sub">By situation</p><p class="muted small" style="margin:0">Make a few choices and your results for each kind of spot show up here.</p>';
+  rows.sort((a, b) => (a.sp.r.length >= 5 ? 0 : 1) - (b.sp.r.length >= 5 ? 0 : 1) || a.sc - b.sc);
+  const weak = weakestSpot(5), cls = sc => sc >= 0.8 ? 'good' : sc >= 0.6 ? 'ok' : 'bad';
+  return `<p class="sub">By situation</p>
+    ${weak ? `<p class="leakline">Biggest leak: <b>${SPOTS[weak]}</b> (${pct(spotScore(stats.spots[weak]))} lately).</p>` : '<p class="muted small" style="margin:0 0 8px">Your biggest leak shows up once a spot has 5 or more choices.</p>'}
+    <div class="rwrap"><table class="spots"><thead><tr><th>Spot</th><th>Choices</th><th title="Last 20 choices: Good counts 1, Fine counts ½">Lately</th><th>Lost</th><th></th></tr></thead><tbody>
+    ${rows.map(({ k, sp, sc }) => `<tr><td>${SPOTS[k]}</td><td>${sp.n}</td><td class="${sp.r.length >= 5 ? cls(sc) : ''}">${pct(sc)}</td><td>${sp.leak >= 5 ? money(sp.leak) : '–'}</td><td>${DRILLABLE.indexOf(k) >= 0 ? `<button type="button" class="smallbtn" data-drill="${k}">${settings.drill === k ? 'Drilling' : 'Drill'}</button>` : ''}</td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+function redoHTML(){
+  if (!redo.length) return '';
+  const due = redo.filter(x => x.due <= handNo).length;
+  if (settings.redo !== 'on') return `<div class="redobox"><span class="muted">${redo.length} missed spot${redo.length === 1 ? '' : 's'} saved. Turn on Redo mistakes in Settings to practice them.</span></div>`;
+  return `<div class="redobox"><span><b>Redo list:</b> ${redo.length} spot${redo.length === 1 ? '' : 's'}${due ? `, ${due} ready now` : ''}. They come back every few hands until you get each right ${REDO_CLEAR} times in a row.</span><button type="button" class="smallbtn" data-redonow>Redo one now</button></div>`;
 }
 function tabStats(){
   const acc = stats.decisions ? Math.round((stats.good + stats.ok) / stats.decisions * 100) : 0;
@@ -1197,7 +1420,9 @@ function tabStats(){
       <div class="stat"><div class="l">Good choices</div><div class="v">${stats.decisions ? acc + '%' : '–'}</div></div>
       <div class="stat"><div class="l">Lost to mistakes</div><div class="v ${stats.leak > 0 ? 'neg' : ''}">${money(stats.leak)}</div></div>
     </div>
-    ${log.length ? `<ul class="loglist">${log.slice(0, 10).map(x => `<li><span class="dot ${x.g}" title="${GL[x.g]}"></span><span>${minis(x.hand)} ${STREET[x.st]} · ${x.you}${x.g !== 'good' ? ` <span class="muted">(best: ${x.best})</span>` : ''}</span><span class="lv">${x.loss >= 5 ? '−' + money(x.loss) : ''}</span></li>`).join('')}</ul>` : '<p class="muted small" style="margin:12px 0 0">Your graded choices will be listed here.</p>'}
+    ${spotsHTML()}
+    ${redoHTML()}
+    ${log.length ? `<p class="sub">Recent choices</p><ul class="loglist">${log.slice(0, 10).map(x => `<li><span class="dot ${x.g}" title="${GL[x.g]}"></span><span>${minis(x.hand)} ${STREET[x.st]} · ${x.you}${x.g !== 'good' ? ` <span class="muted">(best: ${x.best})</span>` : ''}</span><span class="lv">${x.loss >= 5 ? '−' + money(x.loss) : ''}</span></li>`).join('')}</ul>` : '<p class="muted small" style="margin:12px 0 0">Your graded choices will be listed here.</p>'}
     <p style="margin:12px 0 0"><button type="button" class="linkbtn" id="resetBtn">Reset stats</button></p>`;
 }
 const WORDS = `<dl class="gloss">
@@ -1219,6 +1444,7 @@ const WORDS = `<dl class="gloss">
   <dt>Draw</dt><dd>One card away from a flush or straight. Open-ended means either end works; a gutshot needs one exact card.</dd>
   <dt>Dry or wet board</dt><dd>A dry board has few possible straights or flushes; a wet board has lots of them.</dd>
   <dt>Slow-play</dt><dd>Checking or calling with a big hand to trap. At low stakes, betting big hands is usually better.</dd>
+  <dt>Play / raise (under each name)</dt><dd>How often that player puts money in before the flop, and how often they raise before the flop, over the hands you have seen at this table. High play with low raise is a calling station; low play is a rock; high raise is a maniac.</dd>
   <dt>Calling station</dt><dd>A player who calls with almost anything. Never bluff them; bet your good hands.</dd>
   <dt>Isolation raise</dt><dd>Raising after one or more players limped, to play the pot against them with a better hand. Raise 4 big blinds plus 1 for each limper.</dd>
   <dt>Value bet</dt><dd>Betting because worse hands will call. A "thin" value bet uses a medium hand like top pair with a weak kicker, which works against players who call too much.</dd>
@@ -1233,6 +1459,10 @@ function renderTabs(){
 }
 function renderControls(){
   for (const b of document.querySelectorAll('#modeSeg button')) b.setAttribute('aria-pressed', String(b.dataset.mode === settings.mode));
+  for (const g of document.querySelectorAll('.seg[data-key]')) for (const b of g.querySelectorAll('button')) b.setAttribute('aria-pressed', String(settings[g.dataset.key] === b.dataset.val));
+  const dr = $('#drill');
+  if (!dr.options.length) dr.innerHTML = '<option value="off">Off: play full hands</option><option value="auto">Auto: my weakest spot</option>' + DRILLABLE.map(k => `<option value="${k}">${SPOTS[k]}</option>`).join('');
+  dr.value = settings.drill;
   $('#players').value = String(settings.players); $('#stack').value = String(settings.stack); $('#mix').value = settings.mix;
   const acc = stats.decisions ? Math.round((stats.good + stats.ok) / stats.decisions * 100) : null;
   $('#sum').textContent = stats.hands ? `${sm(stats.net)}${acc != null ? ` · ${acc}% good` : ''}` : '';
@@ -1246,6 +1476,7 @@ function render(){
 
 // ---------- events ----------
 $('#dock').addEventListener('click', e => {
+  if (SIM) return;
   if (e.target.closest('[data-more]')) { ui.more = !ui.more; renderStrip(); return; }
   const set = e.target.closest('[data-set]');
   if (set) return setAmt(parseInt(set.dataset.set, 10));
@@ -1262,7 +1493,7 @@ $('#dock').addEventListener('click', e => {
 $('#dock').addEventListener('input', e => { if (e.target.id === 'amt') setAmt(parseInt(e.target.value, 10)); });
 document.querySelector('.tabs').addEventListener('click', e => {
   const b = e.target.closest('[data-tab]'); if (!b) return;
-  ui.tab = b.dataset.tab; renderTabs();
+  ui.tab = b.dataset.tab; if (!SIM) renderTabs();
 });
 $('#setBtn').addEventListener('click', e => {
   const p = $('#settings'); p.hidden = !p.hidden; e.currentTarget.setAttribute('aria-expanded', String(!p.hidden));
@@ -1280,12 +1511,22 @@ function settingChanged(){
 $('#players').addEventListener('change', e => { settings.players = parseInt(e.target.value, 10); settingChanged(); });
 $('#stack').addEventListener('change', e => { settings.stack = parseInt(e.target.value, 10); settingChanged(); });
 $('#mix').addEventListener('change', e => { settings.mix = e.target.value; table = null; settingChanged(); });
+$('#drill').addEventListener('change', e => { settings.drill = e.target.value; ui.drillN = 0; settingChanged(); });
+$('#settings').addEventListener('click', e => {
+  const b = e.target.closest('.seg[data-key] button'); if (!b) return;
+  const key = b.closest('.seg').dataset.key;
+  settings[key] = b.dataset.val; save(); renderControls(); if (!SIM) { renderTabs(); if (key === 'labels') renderTable(); }
+});
 let resetArmed = null;
 $('#tabBody').addEventListener('click', e => {
+  if (SIM) return;
   const rb = e.target.closest('[data-range]');
   if (rb) { S.rangeSel = parseInt(rb.dataset.range, 10); renderTabs(); return; }
+  const db = e.target.closest('[data-drill]');
+  if (db) { settings.drill = db.dataset.drill; ui.drillN = 0; save(); if (S.over || !S.heroActed) newHand(); else { renderControls(); renderTabs(); } return; }
+  if (e.target.closest('[data-redonow]')) { if (redo.length) startRedo(dueRedo() || redo[0]); return; }
   if (e.target.id !== 'resetBtn') return;
-  if (resetArmed) { clearTimeout(resetArmed); resetArmed = null; stats = blankStats(); log = []; save(); render(); return; }
+  if (resetArmed) { clearTimeout(resetArmed); resetArmed = null; stats = blankStats(); log = []; redo = []; save(); render(); return; }
   e.target.textContent = 'Tap again to reset';
   resetArmed = setTimeout(() => { resetArmed = null; renderTabs(); }, 3000);
 });
@@ -1295,6 +1536,7 @@ document.addEventListener('keydown', e => {
   if (e.metaKey || e.ctrlKey || e.altKey) return;
   const k = e.key.toLowerCase();
   if (t.tagName === 'BUTTON' && (k === 'enter' || k === ' ')) return;
+  if (SIM) return;
   if (S.over) { if (k === 'n' || k === 'enter' || k === ' ') { e.preventDefault(); newHand(); } return; }
   if (S.pl[0].folded) { if (k === 'n') skipHand(); return; }
   if (S.toAct !== 0) return;
@@ -1303,7 +1545,7 @@ document.addEventListener('keydown', e => {
   else if (k === 'c') heroAct(toCall(me) > 0 ? 'call' : 'check');
   else if (k === 'r' && canRaise(me)) heroAct('raise', curAmt());
 });
-narrow.addEventListener('change', () => S && renderTable());
+narrow.addEventListener('change', () => S && !SIM && renderTable());
 
 newHand();
 })();
