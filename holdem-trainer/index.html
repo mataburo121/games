@@ -693,7 +693,8 @@ function setupHand(){
   if (!table || table.n !== settings.players || table.mix !== settings.mix) seatTable();
   fillSeats();
   handNo++;
-  const n = table.n, button = S && S.n === n ? (S.button + 1) % n : Math.floor(Math.random() * n);
+  const n = table.n, button = !SIM && table.button != null ? (table.button + 1) % n : Math.floor(Math.random() * n);
+  if (!SIM) table.button = button;
   const deck = shuffle([...Array(52).keys()]), names = posNames(n), buy = settings.stack;
   const pl = [];
   // chips carry over between hands (if on); anyone under $1 rebuys for the full buy-in
@@ -1161,7 +1162,7 @@ function analyze(iters){
       if (S.level >= 2 || tc >= me.stack * 0.35) {
         label = `${hw} against a big re-raise`;
         why = passiveR ? `A re-raise from a ${rtag} is almost always aces or kings. Continue only with your very best hands.` : 'A big re-raise at these stakes usually means a very strong hand. Continue only with your very best hands.';
-        size = fit(S.cur * 2.5); sizeWhy = 'With aces or kings, raise again. With $20 stacks, you are happy to get all the chips in.';
+        size = fit(S.cur * 2.5); sizeWhy = 'With aces or kings, raise again. At these stakes you are happy to get all the chips in with them.';
         if (isAAKK) { cr ? good.add('raise') : good.add('call'); ok.add('call'); rule = `Rule: with aces or kings, raise again (to ${M(size)}).`; }
         else if (['QQ','AKs','AKo'].indexOf(nc) >= 0) { if (passiveR) { good.add('fold'); ok.add('call'); rule = `Fold. A ${rtag} re-raising has aces or kings.`; } else { good.add('call'); if (cr) ok.add('raise'); rule = 'Call with your strongest hands.'; } }
         else if (['JJ','TT','AQs','AQo'].indexOf(nc) >= 0) { good.add('fold'); if (!passiveR) ok.add('call'); rule = 'Fold. This is a close one, but they usually have better.'; }
@@ -1352,7 +1353,8 @@ function analyze(iters){
   if (!good.has('raise') && !ok.has('raise')) size = null;
   const shown = tc > 0 && eqR != null ? eqR : eq;
   // the win / need numbers live at the top of the coach panel, not in the written explanation
-  const evCall = tc > 0 && eqR != null ? eqR * (pot + tc) - tc : null;
+  // before the flop the estimate ignores players still to act, so it can't price a mistake there
+  const evCall = tc > 0 && eqR != null && !(st === 0 && ctx && ctx.behind > 0) ? eqR * (pot + tc) - tc : null;
   const sizeLabel = size != null ? `${S.cur > 0 ? 'Raise to' : 'Bet'} ${money(size)}` : null;
   return { good, ok, why, short: `${label}. ${rule}`, eq: shown, eqR, req, evCall, tc, pot, n, size, sizeLabel, sizeWhy, spot };
 }
@@ -1476,7 +1478,7 @@ function seatHTML(p){
   return `<div class="${cls}${x < 49 ? ' left' : ''}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%"${settings.labels === 'show' ? ` title="${p.prof.blurb}"` : ''}><div class="cards">${cards}</div>${plate}${bubble}</div>`;
 }
 const HUD_MIN = 8;
-function hudOf(p){ const h = table && table.n === S.n && table.hud ? table.hud[p.i] : null; return h && h.h ? h : null; }
+function hudOf(p){ if (!table || table.n !== S.n || !table.hud || (table.names && table.names[p.i] !== p.name)) return null; const h = table.hud[p.i]; return h && h.h ? h : null; }
 function hudLine(p){
   const h = hudOf(p);
   if (!h || h.h < HUD_MIN) return `<div class="hud" title="Their numbers show up after ${HUD_MIN} hands">New · ${h ? h.h : 0} hand${h && h.h === 1 ? '' : 's'}</div>`;
@@ -1777,13 +1779,13 @@ const WORDS = `<dl class="gloss">
   <dt>Play / raise (under each name)</dt><dd>How often that player puts money in before the flop, and how often they raise before the flop, over the hands you have seen at this table. Rough guide over many hands: calling station about 40% play / 7% raise; rock about 17% / 8%; solid player about 23% / 17%; maniac about 43% / 36%. Small samples swing a lot, so trust the numbers more after 30+ hands.</dd>
   <dt>Coach style</dt><dd>Friendly (the default) raises less often and smaller: $0.60 first in, limps with small pairs and suited hands, raises limpers only with premium hands, and re-raises only with aces or kings. Max win raises more and bigger to win the most money, at the cost of drawing more attention.</dd>
   <dt>Calling station</dt><dd>A player who calls with almost anything. Never bluff them; bet your good hands.</dd>
-  <dt>Isolation raise</dt><dd>Raising after one or more players limped, to play the pot against them with a better hand. Raise 4 big blinds plus 1 for each limper.</dd>
+  <dt>Isolation raise</dt><dd>Raising after one or more players limped, to play the pot against them with a better hand. Raise 3 big blinds plus 1 for each limper (4 plus 1 in Max win style).</dd>
   <dt>Value bet</dt><dd>Betting because worse hands will call. A "thin" value bet uses a medium hand like top pair with a weak kicker, which works against players who call too much.</dd>
   <dt>Set mining</dt><dd>Calling a raise with a small pair hoping to make three of a kind (about 1 time in 8). Worth it when the raise is under about 1/15 of the smaller stack.</dd>
   <dt>Implied odds</dt><dd>Extra money you expect to win later when you hit. Players who don't fold top pair give you big implied odds with draws and small pairs.</dd>
   <dt>Semi-bluff</dt><dd>Betting a draw. It can win if they fold now or if you hit later. It doesn't work against players who never fold.</dd>
 </dl>
-<p class="note">How the coach decides: it starts from the tight-aggressive rules of the BlackRain79 cheat sheet (play about the top 20% of hands, raise when first in, fast-play big hands) and adjusts them for a passive home game where people limp a lot, check and call, and bluff only here and there. Raise bigger (4 big blinds plus 1 per limper). Limp behind with small pairs and suited hands. Bet your top pairs yourself, because nobody will bet for you. Never bluff players who call everything. When a passive player raises, believe them. When they bet the turn or river, they usually have it, so call with one pair only when the price is right. Every bet comes with a size. Picking the right move with a size that is way off gets graded "Fine" instead of "Good". The win percentages come from thousands of practice deals against what each player might hold. Chips carry over between hands and anyone under $1 rebuys for the full amount (you can switch to equal stacks every hand under Settings, Stacks).</p>`;
+<p class="note">How the coach decides: it starts from the tight-aggressive rules of the BlackRain79 cheat sheet (play about the top 20% of hands, raise when first in, fast-play big hands) and adjusts them for a passive home game where people limp a lot, check and call, and bluff only here and there. In Friendly style (the default) it raises to 3 big blinds with strong hands and limps with small pairs and suited hands; Max win raises bigger (4 big blinds plus 1 per limper) and more often. Bet your top pairs yourself, because nobody will bet for you. Never bluff players who call everything. When a passive player raises, believe them. When they bet the turn or river, they usually have it, so call with one pair only when the price is right. Every bet comes with a size. Picking the right move with a size that is way off gets graded "Fine" instead of "Good". The win percentages come from thousands of practice deals against what each player might hold. Chips carry over between hands and anyone under $1 rebuys for the full amount (you can switch to equal stacks every hand under Settings, Stacks).</p>`;
 function renderTabs(){
   for (const b of document.querySelectorAll('.tab')) b.setAttribute('aria-selected', String(b.dataset.tab === ui.tab));
   $('#tabBody').innerHTML = ui.tab === 'range' ? tabRange() : ui.tab === 'history' ? tabHistory() : ui.tab === 'stats' ? tabStats() : WORDS;
