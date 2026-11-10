@@ -1298,6 +1298,33 @@ function resultText(){
     return `${label}${names} ${money(pt.amount)} with ${describe(pt.val).toLowerCase()}`;
   }).join('<br>');
 }
+// Bet chips: try spots between each seat and the middle of the table and keep the first one that
+// covers no name tag, cards, action label, board or other chip (or the least-covered one if none is clear).
+function placeChips(){
+  const wrap = $('#table'), W = wrap.getBoundingClientRect();
+  const blockers = [...wrap.querySelectorAll('.seat .plate, .seat .cards, .seat .bubble, .seat .made, .board, .potline')].map(el => el.getBoundingClientRect()).filter(r => r.width);
+  const area = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+  const placed = [];
+  for (const ch of wrap.querySelectorAll('.betchip')) {
+    const i = +ch.dataset.i, cands = [];
+    if (i === 0) { const y = narrow.matches ? 64 : 67; for (const oy of [0, -12, 10]) for (const ox of [0, -64, 64, -104, 104]) cands.push([50, y, ox, oy]); }
+    else {
+      const a = (90 + i * 360 / S.n) * Math.PI / 180, tx = -Math.sin(a), ty = Math.cos(a);
+      for (const t of [0.6, 0.52, 0.68, 0.45, 0.75, 0.38, 0.3]) for (const o of [0, 22, -22, 44, -44]) { const [x, y] = seatXY(i, S.n, t); cands.push([x, y, tx * o, ty * o]); }
+    }
+    let best = cands[0], bestCost = Infinity, bestRect = null;
+    for (const c of cands) {
+      ch.style.left = `calc(${c[0].toFixed(2)}% + ${c[2].toFixed(0)}px)`; ch.style.top = `calc(${c[1].toFixed(2)}% + ${c[3].toFixed(0)}px)`;
+      const r = ch.getBoundingClientRect();
+      let cost = r.left < W.left || r.right > W.right ? 1e6 : 0;
+      for (const b of blockers) cost += area(r, b);
+      for (const b of placed) cost += 2 * area(r, b);
+      if (cost < bestCost) { bestCost = cost; best = c; bestRect = r; if (cost === 0) break; }
+    }
+    ch.style.left = `calc(${best[0].toFixed(2)}% + ${best[2].toFixed(0)}px)`; ch.style.top = `calc(${best[1].toFixed(2)}% + ${best[3].toFixed(0)}px)`;
+    placed.push(bestRect);
+  }
+}
 function renderTable(){
   const board = [0,1,2,3,4].map(i => cardHTML(S.board[i], { deal: S.newCards && S.newCards.indexOf(S.board[i]) >= 0 })).join('');
   const mid = S.practiceDone
@@ -1307,9 +1334,10 @@ function renderTable(){
     : `<div class="potline"><span>${STREET[S.street]}</span><span>Pot <b>${money(potTotal())}</b></span></div>`;
   const chips = S.pl.filter(p => p.bet > 0).map(p => {
     const [x, y] = p.i === 0 ? [50, narrow.matches ? 64 : 67] : seatXY(p.i, S.n, 0.6);
-    return `<div class="betchip" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%">${money(p.bet)}</div>`;
+    return `<div class="betchip" data-i="${p.i}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%">${money(p.bet)}</div>`;
   }).join('');
   $('#table').innerHTML = `<div class="felt"></div>${chips}<div class="center"><div class="board">${board}</div>${mid}</div>${S.pl.map(seatHTML).join('')}`;
+  if (chips) placeChips();
 }
 
 // actions
