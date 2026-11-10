@@ -159,6 +159,11 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .before .act.k-reraise,.before .act.k-allin{background:color-mix(in srgb,#FF6B5B 28%,var(--surface))}
 .before .act.k-check,.before .act.k-call{background:color-mix(in srgb,#7FB2FF 26%,var(--surface))}
 .before .act.k-fold{color:var(--muted)}
+.rlist{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+.rlist li{display:flex;flex-direction:column;gap:2px;padding-bottom:8px;border-bottom:1px solid var(--line);font-size:13.5px}
+.rlist.them li{display:block;padding-bottom:6px}
+.rlist li:last-child{border-bottom:0}
+.rh{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .tag-reg{color:var(--t-reg)} .tag-rock{color:var(--t-rock)} .tag-maniac{color:var(--t-maniac)} .tag-station{color:var(--t-station)}
 .made{font:600 12px var(--font-body);color:var(--felt-ink);background:var(--plate);border:1px solid var(--felt-line);border-radius:999px;padding:1px 10px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cards{display:flex;gap:3px;min-height:calc(var(--cw)*1.4)}
@@ -327,6 +332,8 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
     <section class="sgroup"><h2>Practice</h2><div class="row">
       <div class="ctl"><label class="ctl-label" for="drill">Drill</label>
       <select id="drill"></select></div>
+      <div class="ctl"><span class="ctl-label">Hand recap</span>
+      <div class="seg" data-key="recap" role="group" aria-label="Hand recap after each hand"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
       <div class="ctl"><span class="ctl-label">Redo mistakes</span>
       <div class="seg" data-key="redo" role="group" aria-label="Redo mistakes"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
       <div class="ctl"><span class="ctl-label">Skip junk hands</span>
@@ -584,7 +591,7 @@ const store = {
 };
 const blankStats = () => ({ hands: 0, net: 0, decisions: 0, good: 0, ok: 0, bad: 0, leak: 0, spots: {} });
 const saved = store.get() || {};
-const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on', style: 'friendly', carry: 'on', showOdds: 'on' }, saved.settings || {});
+const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on', style: 'friendly', carry: 'on', showOdds: 'on', recap: 'on' }, saved.settings || {});
 let stats = Object.assign(blankStats(), saved.stats || {});
 let log = Array.isArray(saved.log) ? saved.log : [];
 let redo = Array.isArray(saved.redo) ? saved.redo : []; // missed spots saved for replay
@@ -786,7 +793,7 @@ function act(i, type, to){
   }
   let base, third;
   const lvl0 = S.level;
-  if (type === 'fold') { p.folded = true; base = 'fold'; third = 'folds'; }
+  if (type === 'fold') { p.folded = true; p.foldSt = S.street; base = 'fold'; third = 'folds'; }
   else if (type === 'check') { base = 'check'; third = 'checks'; }
   else if (type === 'call') { commit(p, tc); if (S.street === 0 && S.level === 0) S.limpers++; base = `call ${money(tc)}`; third = `calls ${money(tc)}`; }
   else {
@@ -1656,9 +1663,9 @@ function renderStrip(){
         : `${prev}<p class="swhy"><span class="bestchip inl">Best: ${bestLabel(A)}</span> ${A.short} ${moreBtn()}</p>${ui.more ? `<p class="sfull">${A.why}</p>` : ''}`;
     }
   } else if (e) {
-    html = feedbackHTML(e, false); tone = e.g;
+    html = feedbackHTML(e, false) + (S.over ? recapBtn() : ''); tone = e.g;
   } else if (S.over) {
-    html = '<span class="muted">No decisions for you this hand. Deal the next one.</span>';
+    html = `<span class="muted">No decisions for you this hand.</span> ${recapBtn()}`;
   } else if (me.folded) {
     html = '<span class="muted">You are out of this hand.</span>';
   } else {
@@ -1734,6 +1741,23 @@ function tabRange(){
   const rd = readOf(tgt), about = settings.labels === 'show' ? `<b>${pname(tgt)} (${tgt.prof.name.toLowerCase()}):</b> ${tgt.prof.blurb}` : `${hudText(tgt)} <b>Coach's read:</b> ${rd.key ? `looks like a ${KIND_WORD[rd.key]}.` : `not enough hands yet (needs ${READ_MIN}).`}`;
   return `<div class="chips">${choices}</div><p class="small" style="margin:0 0 4px">${about}</p><p class="muted small" style="margin:0 0 10px">Darker squares are hands they are more likely to have, based on how they have bet this hand (about ${Math.max(1, Math.round(g.share * 100))}% of all hands). "s" means same suit.</p><div class="rwrap"><div class="rgrid">${g.html}</div></div>`;
 }
+// after the hand: your decisions with grades, and what everyone actually held
+const recapBtn = () => settings.recap === 'on' ? '<button type="button" class="morebtn" data-recap>Hand recap</button>' : '';
+function recapHTML(){
+  if (settings.recap !== 'on' || !S.over) return '';
+  const mine = log.filter(e => e.id === S.id).reverse();
+  const dec = mine.length ? mine.map(e => `<li><div class="rh"><span class="pill ${e.g}">${GL[e.g]}</span><b>${STREET[e.st]}</b>${e.board.length ? ` <span class="nowrap">${minis(e.board)}</span>` : ''}</div>
+      <div>You: <b>${e.you}</b>${e.g !== 'good' ? ` · Best: <b>${e.best}</b>` : ''}</div><div class="muted small">${e.short || ''}</div></li>`).join('')
+    : '<li class="muted small">You had no decisions this hand.</li>';
+  const fin = S.board.length === 5;
+  const them = S.pl.filter(p => p.i !== 0).map(p => {
+    const what = p.folded ? `folded ${p.foldSt ? 'on the ' + STREET[p.foldSt].toLowerCase() : 'before the flop'}` : S.showdown || fin ? describe(evalHand([...p.cards, ...S.board])).toLowerCase() : 'won without a showdown';
+    return `<li><b>${pname(p)}</b> <span class="nowrap">${minis(p.cards)}</span> <span class="muted">${what}</span></li>`;
+  }).join('');
+  return `<div class="recap"><p class="sub" style="margin-top:0">Your decisions</p><ul class="rlist">${dec}</ul>
+    <p class="sub">What everyone held</p><ul class="rlist them">${them}</ul>
+    <p class="muted small" style="margin:6px 0 0">In a real game you only see cards that are shown down. Seeing them all here shows what each bet usually meant.</p></div>`;
+}
 function tabHistory(){
   const rows = [];
   for (let st = 0; st <= S.street; st++) {
@@ -1743,7 +1767,7 @@ function tabHistory(){
     rows.push(`<div class="row"><span class="st">${STREET[st]}</span><span class="txt">${bd.length ? minis(bd) + ' &nbsp;' : ''}${lines.join(' · ')}</span></div>`);
   }
   if (S.over && S.showdown) rows.push(`<div class="row"><span class="st">Show</span><span class="txt">${alive().map(p => `${nm(p)} ${minis(p.cards)}`).join(' · ')}</span></div>`);
-  return `<p class="muted small" style="margin:0 0 8px">Hand #${S.id}</p><div class="history">${rows.join('')}</div>`;
+  return `${recapHTML()}<p class="${S.over && settings.recap === 'on' ? 'sub' : 'muted small'}" style="margin:${S.over && settings.recap === 'on' ? '18px' : '0'} 0 8px">${S.over && settings.recap === 'on' ? 'Action' : 'Hand #' + S.id}</p><div class="history">${rows.join('')}</div>`;
 }
 function spotsHTML(){
   if (settings.bySpot !== 'on') return '';
@@ -1837,6 +1861,7 @@ function render(){
 $('#dock').addEventListener('click', e => {
   if (SIM) return;
   if (e.target.closest('[data-more]')) { ui.more = !ui.more; renderStrip(); return; }
+  if (e.target.closest('[data-recap]')) { ui.tab = 'history'; renderTabs(); const pn = document.querySelector('#tabBody'); if (pn) pn.closest('.panel').scrollIntoView({ behavior: 'smooth', block: 'start' }); return; }
   const set = e.target.closest('[data-set]');
   if (set) return setAmt(parseInt(set.dataset.set, 10));
   const b = e.target.closest('[data-act]');
@@ -1919,7 +1944,7 @@ $('#settings').addEventListener('click', e => {
   const key = b.closest('.seg').dataset.key;
   settings[key] = b.dataset.val; save(); renderControls();
   if (!SIM && key === 'style' && S && !S.over && S.toAct === 0) { S.analysis = analyze(); render(); return; }
-  if (!SIM) { renderTabs(); renderTable(); }
+  if (!SIM) { renderTabs(); renderTable(); renderStrip(); }
 });
 let resetArmed = null;
 $('#tabBody').addEventListener('click', e => {
