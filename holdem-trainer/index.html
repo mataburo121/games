@@ -342,7 +342,7 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
       <div class="ctl"><span class="ctl-label">Stats by spot</span>
       <div class="seg" data-key="bySpot" role="group" aria-label="Stats by situation"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
     </div></section>
-    <p class="ver" id="ver">Version 38 · Nov 10 <button type="button" class="smallbtn" id="reloadBtn">Reload to get the latest version</button></p>
+    <p class="ver" id="ver">Version 39 · Nov 10 <button type="button" class="smallbtn" id="reloadBtn">Reload to get the latest version</button></p>
   </div>
 
   <main class="grid">
@@ -1288,6 +1288,8 @@ function analyze(iters){
     } else {
       const raisedMe = !!S.heroAgg[st], late = st >= 2;
       const tooBig = eqR != null && eqR < req - 0.12;
+      const nearBig = eqR != null && Math.abs(eqR - (req - 0.12)) < 0.03, nearPrice = eqR != null && Math.abs(eqR - req) < 0.03;
+      const coin = () => { good.clear(); ok.clear(); good.add('call'); good.add('fold'); rule = 'Close spot: calling and folding are both fine.'; };
       if (H.kind === 'monster') {
         size = fit(S.cur * 3); cr ? good.add('raise') : good.add('call'); ok.add('call');
         rule = cr ? `Rule: raise your big hands, to about ${M(size)} (3x their bet).` : 'Call.';
@@ -1322,9 +1324,11 @@ function analyze(iters){
           const priced = eqR != null && eqR >= req;
           if (priced) { good.add('call'); ok.add('fold'); } else { good.add('fold'); ok.add('call'); }
           rule = priced ? `Call. A ${btag} betting the ${stName} is usually strong, but the price is good enough.` : `Fold. A ${btag} betting the ${stName} usually has you beat.`;
+          if (nearPrice) coin();
           why = `When a ${btag} bets the ${stName}, most of the time they have a real hand, but they do take a stab now and then (often after everyone checks). So it comes down to the price: call when the pot pays enough to cover the times they have it, fold when it doesn't. ${tp ? pairCap : 'Middle pair'} only beats their bluffs.`;
         } else if (tooBig) {
           good.add('fold'); ok.add('call'); rule = 'Normally a call, but this bet is too big for your hand. Fold.'; why = 'One pair is worth a call at a normal price, not a big one.';
+          if (nearBig) coin();
         } else {
           good.add('call'); if (bk === 'maniac' && cr) ok.add('raise');
           rule = tp ? `Rule: call with ${pairName}.` : 'Rule: call with middle pair against a small bet.';
@@ -1332,7 +1336,7 @@ function analyze(iters){
         }
       } else if (goodDraw && st < 3) {
         const implied = station || allPassive;
-        if (tooBig && !(implied && eqR >= req - 0.2)) { good.add('fold'); ok.add('call'); rule = 'Fold. The bet is too big for your draw.'; why = 'A draw is only worth calling at a fair price.'; }
+        if (tooBig && !(implied && eqR >= req - 0.2)) { good.add('fold'); ok.add('call'); rule = 'Fold. The bet is too big for your draw.'; why = 'A draw is only worth calling at a fair price.'; if (nearBig) coin(); }
         else {
           good.add('call'); if (bk === 'maniac' && cr) { ok.add('raise'); size = fit(S.cur * 3); }
           rule = 'Rule: call with a good draw.';
