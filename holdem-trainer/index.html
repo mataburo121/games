@@ -342,7 +342,7 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
       <div class="ctl"><span class="ctl-label">Stats by spot</span>
       <div class="seg" data-key="bySpot" role="group" aria-label="Stats by situation"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
     </div></section>
-    <p class="ver" id="ver">Version 36 · Nov 10 <button type="button" class="smallbtn" id="reloadBtn">Reload to get the latest version</button></p>
+    <p class="ver" id="ver">Version 37 · Nov 10 <button type="button" class="smallbtn" id="reloadBtn">Reload to get the latest version</button></p>
   </div>
 
   <main class="grid">
@@ -1119,6 +1119,12 @@ function analyze(iters){
         label = `${hw}, a trap hand in a limped pot`;
         rule = late ? 'Limp behind from a late seat. Be careful with one pair.' : sbCheap ? 'Call the extra $0.10. Be careful with one pair.' : 'Fold. Offsuit big cards play badly in big multiway pots.';
         why = `Offsuit big cards often make top pair with a weak kicker, which loses the most money in home games. ${late ? 'From a late seat a cheap look is fine; just don\'t get attached to one pair.' : sbCheap ? 'From the small blind it only costs $0.10 more, but you will act first after the flop, so play carefully.' : 'With several players still to act behind you, let it go.'}`;
+      } else if (p < openT && nc.endsWith('o')) {
+        // weak offsuit hands (A-5, K-9, Q-8...): often outkicked by a limper's better hand, and they rarely make flushes or straights
+        good.add('fold'); if (late) ok.add('call');
+        label = `${hw}, a weak offsuit hand in a limped pot`;
+        rule = late ? 'Fold. A cheap limp from a late seat is OK, but folding is the disciplined play.' : 'Fold. Weak offsuit hands lose the big pots.';
+        why = `${limpWord}. When you pair your high card, a limper often has the same card with a better kicker, so you win small pots and lose big ones. Offsuit hands also rarely make flushes or straights to make up for it.${late ? ' Acting last after the flop helps, so a limp is not a big mistake.' : ''}`;
       } else if (p < openT) {
         good.add('call'); ok.add('raise'); label = `${hw}, a hand worth playing`;
         rule = 'Limp behind. A raise is fine sometimes.'; why = `${limpWord}. Friendly style keeps the pot small with medium hands and saves raises for big ones.`;
