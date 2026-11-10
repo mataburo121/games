@@ -1057,10 +1057,11 @@ function analyze(iters){
   const eqR = eq == null ? null : eq * real;
   const req = tc > 0 ? tc / (pot + tc) : null;
   const good = new Set(), ok = new Set();
-  const kinds = opps.map(o => o.prof.key);
+  // the coach only uses what you can see: its read from each player's numbers (or the real type if you chose to show types)
+  const kinds = opps.map(o => readOf(o).key);
   const station = kinds.indexOf('station') >= 0, maniacIn = kinds.indexOf('maniac') >= 0;
   const allPassive = n > 0 && kinds.every(k => k === 'station' || k === 'rock');
-  const bettor = S.aggressor > 0 ? S.pl[S.aggressor] : null, bk = bettor ? bettor.prof.key : null;
+  const bettor = S.aggressor > 0 ? S.pl[S.aggressor] : null, bk = bettor ? readOf(bettor).key : null;
   const passiveBettor = bk === 'station' || bk === 'rock', btag = bk ? KIND_WORD[bk] : 'player';
   const rb = cr ? raiseBounds(me) : null;
   const fit = v => rb ? Math.max(rb.min, Math.min(rb.max, r10(v))) : null;
@@ -1154,7 +1155,7 @@ function analyze(iters){
       else { good.add('check'); if (p < 0.15) ok.add('raise'); label = hw; rule = 'Check and see the flop for free.'; why = 'You are already in for the big blind and nobody raised, so take the free look.'; }
     } else {
       const raiser = S.pfr >= 0 ? S.pl[S.pfr] : bettor, rpos = raiser ? raiser.pos : '';
-      const rk = raiser && raiser.i !== 0 ? raiser.prof.key : null, rtag = rk ? KIND_WORD[rk] : 'player';
+      const rk = raiser && raiser.i !== 0 ? readOf(raiser).key : null, rtag = rk ? KIND_WORD[rk] : 'player';
       const passiveR = rk === 'station' || rk === 'rock';
       const early = rpos === 'Early', steal = rpos === 'Late' || rpos === 'Dealer' || (rpos === 'Small blind' && me.pos === 'Big blind');
       const callers = S.pl.filter(o => o.i !== 0 && raiser && o.i !== raiser.i && !o.folded && o.bet === S.cur).length;
@@ -1356,6 +1357,14 @@ function analyze(iters){
   // before the flop the estimate ignores players still to act, so it can't price a mistake there
   const evCall = tc > 0 && eqR != null && !(st === 0 && ctx && ctx.behind > 0) ? eqR * (pot + tc) - tc : null;
   const sizeLabel = size != null ? `${S.cur > 0 ? 'Raise to' : 'Bet'} ${money(size)}` : null;
+  // say who the advice is about and what the read is based on
+  if (settings.labels !== 'show') {
+    let focus = null;
+    if (st === 0 && ctx && ctx.kind === 'facing') focus = S.pfr > 0 ? S.pl[S.pfr] : bettor;
+    else if (st > 0 && tc > 0) focus = bettor;
+    else if (n === 1) focus = opps[0];
+    if (focus && focus.i !== 0) why = `${readNote(focus)} ${why}`;
+  }
   return { good, ok, why, short: `${label}. ${rule}`, eq: shown, eqR, req, evCall, tc, pot, n, size, sizeLabel, sizeWhy, spot };
 }
 const actName = (k, tc) => ({ fold: 'Fold', check: 'Check', call: 'Call', raise: tc > 0 ? 'Raise' : 'Bet' })[k];
@@ -1477,7 +1486,24 @@ function seatHTML(p){
   const [x, y] = seatXY(p.i, S.n, 1);
   return `<div class="${cls}${x < 49 ? ' left' : ''}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%"${settings.labels === 'show' ? ` title="${p.prof.blurb}"` : ''}><div class="cards">${cards}</div>${plate}${bubble}</div>`;
 }
-const HUD_MIN = 8;
+const HUD_MIN = 8, READ_MIN = 10;
+// the coach's read on a player, from the numbers you can see under their name
+function readOf(p){
+  if (settings.labels === 'show') return { key: p.prof.key, h: Infinity };
+  const h = hudOf(p);
+  if (!h || h.h < READ_MIN) return { key: null, h: h ? h.h : 0 };
+  const vp = h.vpip / h.h, pf = h.pfr / h.h;
+  // raising is the clearest signal: lots = maniac, fairly often = solid; rare raisers split by how many hands they play
+  const key = pf >= 0.25 ? 'maniac' : pf >= 0.13 ? 'reg' : vp >= 0.27 ? 'station' : 'rock';
+  const play = vp >= 0.27 ? 'plays lots of hands' : vp >= 0.2 ? 'plays a fair number of hands' : 'plays few hands';
+  const raise = pf >= 0.25 ? 'raises a lot' : pf >= 0.13 ? 'raises fairly often' : 'rarely raises';
+  return { key, h: h.h, desc: `${play} and ${raise}` };
+}
+function readNote(p){
+  const r = readOf(p);
+  if (!r.key) return `You have seen only ${r.h} hand${r.h === 1 ? '' : 's'} from ${pname(p)}, so treat them as a typical player for now.`;
+  return `${pname(p)} ${r.desc}, which is how a ${KIND_WORD[r.key]} plays.`;
+}
 function hudOf(p){ if (!table || table.n !== S.n || !table.hud || (table.names && table.names[p.i] !== p.name)) return null; const h = table.hud[p.i]; return h && h.h ? h : null; }
 function hudLine(p){
   const h = hudOf(p);
@@ -1705,7 +1731,7 @@ function tabRange(){
   if (isQuiz() && !S.over) return '<p class="muted small">Hidden in quiz mode until the hand ends. Try to guess what they have first.</p>';
   const g = rangeGrid(tgt);
   const choices = alive().filter(o => o.i !== 0).map(o => `<button type="button" class="chipbtn" data-range="${o.i}" aria-pressed="${o === tgt}">${pname(o)} · ${o.pos}</button>`).join('');
-  const about = settings.labels === 'show' ? `<b>${pname(tgt)} (${tgt.prof.name.toLowerCase()}):</b> ${tgt.prof.blurb}` : hudText(tgt);
+  const rd = readOf(tgt), about = settings.labels === 'show' ? `<b>${pname(tgt)} (${tgt.prof.name.toLowerCase()}):</b> ${tgt.prof.blurb}` : `${hudText(tgt)} <b>Coach's read:</b> ${rd.key ? `looks like a ${KIND_WORD[rd.key]}.` : `not enough hands yet (needs ${READ_MIN}).`}`;
   return `<div class="chips">${choices}</div><p class="small" style="margin:0 0 4px">${about}</p><p class="muted small" style="margin:0 0 10px">Darker squares are hands they are more likely to have, based on how they have bet this hand (about ${Math.max(1, Math.round(g.share * 100))}% of all hands). "s" means same suit.</p><div class="rwrap"><div class="rgrid">${g.html}</div></div>`;
 }
 function tabHistory(){
