@@ -141,6 +141,23 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .stk i:nth-child(odd){background:color-mix(in srgb,var(--c) 82%,#fff)}
 .seat.hero .stk{transform:scale(1.2);transform-origin:bottom center;margin-right:2px}
 @media (max-width:640px){.stk{width:11px}.stk i{width:11px;height:4px}}
+/* action badges on the felt, colored by what they did */
+.bubble.k-fold{background:#3A434C;color:#C9D2DB}
+.bubble.k-check,.bubble.k-call{background:#CFE3FF;color:#0E2340}
+.bubble.k-bet,.bubble.k-raise{background:#FFB547;color:#2B1A00}
+.bubble.k-reraise,.bubble.k-allin{background:#FF6B5B;color:#2A0905}
+.seat .bubble[class*=" k-"]{max-width:150%}
+.seat .cards .foldtag{align-self:flex-end}
+.bestchip.inl{margin:0 4px 0 0;display:inline-block;padding:1px 10px;font-size:12.5px}
+@media (max-width:640px){.before .act{font-size:11.5px;padding:0 5px}.before{font-size:12px;gap:3px 5px;margin-bottom:5px}}
+.skipline{font-size:12px;color:var(--muted);margin:0 0 5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.skipline .mc{font-size:10.5px;padding:0 3px}
+.before{font-size:13px;line-height:1.5;margin:0 0 6px;display:flex;flex-wrap:wrap;gap:4px 6px;align-items:baseline}
+.before .act{display:inline-block;border-radius:6px;padding:0 6px;font-weight:600;font-size:12.5px;background:var(--cell)}
+.before .act.k-bet,.before .act.k-raise{background:color-mix(in srgb,#FFB547 30%,var(--surface))}
+.before .act.k-reraise,.before .act.k-allin{background:color-mix(in srgb,#FF6B5B 28%,var(--surface))}
+.before .act.k-check,.before .act.k-call{background:color-mix(in srgb,#7FB2FF 26%,var(--surface))}
+.before .act.k-fold{color:var(--muted)}
 .tag-reg{color:var(--t-reg)} .tag-rock{color:var(--t-rock)} .tag-maniac{color:var(--t-maniac)} .tag-station{color:var(--t-station)}
 .made{font:600 12px var(--font-body);color:var(--felt-ink);background:var(--plate);border:1px solid var(--felt-line);border-radius:999px;padding:1px 10px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cards{display:flex;gap:3px;min-height:calc(var(--cw)*1.4)}
@@ -167,7 +184,7 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .center{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:8px;width:min(80%,440px);color:var(--felt-ink);z-index:1;--cw:42px}
 @media (max-width:640px){.center{--cw:28px;top:45%;width:46%;gap:6px}.board{gap:4px}.result{padding:5px 9px;font-size:11px}.result strong{font-size:12px}.potline{padding:2px 10px}}
 .board{display:flex;gap:5px}
-.potline{display:flex;gap:10px;align-items:baseline;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--felt-muted);background:rgba(0,0,0,.45);border-radius:999px;padding:3px 12px}
+.potline{white-space:nowrap;display:flex;gap:10px;align-items:baseline;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--felt-muted);background:rgba(0,0,0,.45);border-radius:999px;padding:3px 12px}
 .potline b{font:600 14px var(--font-mono);letter-spacing:0;color:var(--felt-ink);text-transform:none}
 .result{background:var(--plate);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid color-mix(in srgb,var(--gold) 60%,transparent);border-radius:14px;padding:7px 14px;text-align:center;font-size:12px;box-shadow:0 10px 24px -8px rgba(0,0,0,.5)}
 .result strong{font:600 13.5px var(--font-display);display:block;text-wrap:balance}
@@ -179,7 +196,7 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 @media (max-width:640px){
   .play{height:max(570px,calc(100svh - 62px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));gap:8px}
   .dock{display:contents}
-  .strip{order:-1;flex:none;height:136px;overflow-y:auto;overscroll-behavior:contain;padding:9px 12px;font-size:13.5px}
+  .strip{order:-1;flex:none;height:158px;overflow-y:auto;overscroll-behavior:contain;padding:9px 12px;font-size:13.5px}
   .strip .swhy{font-size:13px;margin-top:4px}.strip .prev{padding-bottom:6px;margin-bottom:6px}.strip .minibar{margin:6px 0 2px}
   .actions{position:sticky;bottom:0;z-index:5;flex:none;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
 }
@@ -295,6 +312,8 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
       <div class="seg" data-key="swipe" role="group" aria-label="Swipe up on your cards to fold"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
     </div></section>
     <section class="sgroup"><h2>Coach</h2><div class="row">
+      <div class="ctl"><span class="ctl-label">Show odds</span>
+      <div class="seg" data-key="odds" role="group" aria-label="Show win and pot odds percentages"><button type="button" data-val="off">Off</button><button type="button" data-val="on">On</button></div></div>
       <div class="ctl"><span class="ctl-label">Style</span>
       <div class="seg" data-key="style" role="group" aria-label="Coach style"><button type="button" data-val="friendly" title="Raise less often and smaller; limp with speculative hands">Friendly</button><button type="button" data-val="max" title="Raise more and bigger to win the most money">Max win</button></div></div>
       <div class="ctl"><span class="ctl-label">Mode</span>
@@ -550,7 +569,7 @@ const store = {
 };
 const blankStats = () => ({ hands: 0, net: 0, decisions: 0, good: 0, ok: 0, bad: 0, leak: 0, spots: {} });
 const saved = store.get() || {};
-const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on', style: 'friendly', carry: 'on' }, saved.settings || {});
+const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on', style: 'friendly', carry: 'on', odds: 'off' }, saved.settings || {});
 let stats = Object.assign(blankStats(), saved.stats || {});
 let log = Array.isArray(saved.log) ? saved.log : [];
 let redo = Array.isArray(saved.redo) ? saved.redo : []; // missed spots saved for replay
@@ -670,7 +689,7 @@ function setupHand(){
     acted: false, entered: false, cards: [deck.pop(), deck.pop()], range: newRange(), last: '', pos: names[(i - button + n) % n] });
   S = { id: handNo, n, button, pl, deck, board: [], street: 0, pot: 0, cur: 0, minRaise: BB_C, level: 0, limpers: 0, toAct: -1,
         over: false, showdown: false, hist: [], analysis: null, result: null, heroActed: false, buy, rangeSel: -1, newCards: null, pfr: -1, heroAgg: {}, bets: [] };
-  S.sbI = (button + 1) % n; S.bbI = (button + 2) % n; S.heroStart = pl[0].stack;
+  S.sbI = (button + 1) % n; S.bbI = (button + 2) % n; S.heroStart = pl[0].stack; S.acts = [];
   if (!SIM) for (const i of rebuys) S.hist.push({ st: 0, t: `${i === 0 ? 'You rebuy' : nm(pl[i]) + ' rebuys'} for ${money(buy)}` });
   commit(pl[S.sbI], SB_C); commit(pl[S.bbI], BB_C); S.cur = BB_C;
   S.hist.push({ st: 0, t: `${nm(pl[S.sbI])} post${S.sbI === 0 ? '' : 's'} $0.10, ${nm(pl[S.bbI])} post${S.bbI === 0 ? '' : 's'} $0.20` });
@@ -684,12 +703,12 @@ function dueRedo(){
   return pick;
 }
 function snapshot(){
-  const keep = ['n','button','deck','board','street','pot','cur','minRaise','level','limpers','buy','pfr','heroAgg','bets','sbI','bbI'], o = {};
-  for (const k of keep) o[k] = JSON.parse(JSON.stringify(S[k]));
+  const keep = ['n','button','deck','board','street','pot','cur','minRaise','level','limpers','buy','pfr','heroAgg','bets','sbI','bbI','acts'], o = {};
+  for (const k of keep) if (S[k] !== undefined) o[k] = JSON.parse(JSON.stringify(S[k]));
   o.aggressor = S.aggressor == null ? -1 : S.aggressor;
   o.hist = S.hist.map(h => ({ st: h.st, t: h.t }));
   o.pl = S.pl.map(p => ({ i: p.i, k: p.prof ? p.prof.key : null, stack: p.stack, bet: p.bet, total: p.total, folded: p.folded, allIn: p.allIn, acted: p.acted,
-    entered: p.entered, cards: p.cards.slice(), last: p.last, pos: p.pos, name: p.name, r: p.i !== 0 && !p.folded ? encR(p.range) : '' }));
+    entered: p.entered, cards: p.cards.slice(), last: p.last, lastKind: p.lastKind || '', pos: p.pos, name: p.name, r: p.i !== 0 && !p.folded ? encR(p.range) : '' }));
   return o;
 }
 function startRedo(it){
@@ -750,6 +769,7 @@ function act(i, type, to){
     else if (type !== 'fold') { const h = table.hud[i]; if (h) { h.post++; if (type === 'raise') h.agg++; } }
   }
   let base, third;
+  const lvl0 = S.level;
   if (type === 'fold') { p.folded = true; base = 'fold'; third = 'folds'; }
   else if (type === 'check') { base = 'check'; third = 'checks'; }
   else if (type === 'call') { commit(p, tc); if (S.street === 0 && S.level === 0) S.limpers++; base = `call ${money(tc)}`; third = `calls ${money(tc)}`; }
@@ -763,7 +783,16 @@ function act(i, type, to){
   if ((type === 'call' || type === 'raise') && p.stack === 0) { base += ' (all-in)'; third += ' (all-in)'; }
   p.acted = true;
   if (type !== 'fold') p.entered = true;
-  p.last = cap(base);
+  // what the seat badge and the "before you" line say
+  let lbl, kind;
+  if (type === 'fold') { lbl = 'Folded'; kind = 'fold'; }
+  else if (type === 'check') { lbl = 'Checked'; kind = 'check'; }
+  else if (type === 'call') { lbl = S.street === 0 && lvl0 === 0 ? 'Called big blind' : `Called ${money(p.bet)}`; kind = 'call'; }
+  else if (cur === 0) { lbl = `Bet ${money(to)}`; kind = 'bet'; }
+  else { const re = S.street === 0 ? lvl0 >= 1 : lvl0 >= 2; lbl = `${re ? 'Re-raised' : 'Raised'} to ${money(to)}`; kind = re ? 'reraise' : 'raise'; }
+  if ((type === 'call' || type === 'raise') && p.stack === 0) { lbl += ' (all-in)'; kind = 'allin'; }
+  p.last = lbl; p.lastKind = kind;
+  (S.acts || (S.acts = [])).push({ i, lbl, kind });
   S.hist.push({ st: S.street, t: i === 0 ? `You ${base}` : `${nm(p)} ${third}` });
   if (type === 'raise') { S.aggressor = i; if (S.street === 0) S.pfr = i; if (i === 0) S.heroAgg[S.street] = true; }
   const live = alive();
@@ -795,7 +824,8 @@ function endStreet(){
     if (S.pl[0].folded) { while (S.street < 3) deal(); return showdown(); }
     render(); timer = setTimeout(runout, delay(650)); return;
   }
-  for (const p of S.pl) if (!p.folded) p.last = '';
+  for (const p of S.pl) if (!p.folded) { p.last = ''; p.lastKind = ''; }
+  S.acts = [];
   deal();
   S.toAct = findNext(S.button);
   nextTurn();
@@ -984,6 +1014,7 @@ function handClass(hole, board){
   return { kind, draw, hi: h[0], label: names[kind] + (draw ? dn[draw] : '') };
 }
 
+const rangeWords = t => settings.odds === 'on' ? `roughly the best ${pct(t)} of hands` : t >= 0.3 ? 'a fairly wide range of decent hands' : t >= 0.2 ? 'your better hands' : t >= 0.13 ? 'only good hands' : 'only strong hands';
 function analyze(iters){
   const me = S.pl[0], tc = toCall(me), pot = potTotal(), cr = canRaise(me), st = S.street, ctx = preCtx(me);
   let opps = S.pl.filter(o => o.i !== 0 && !o.folded && o.entered);
@@ -1012,7 +1043,7 @@ function analyze(iters){
     const cell = cellOf(...me.cards), nc = cellName(cell), p = PCT[cell], hw = cap(handWords(cell)), L = S.limpers;
     spot = ctx.kind === 'unopened' ? 'open' : ctx.kind === 'limped' ? 'limped' : 'bb';
     const openT = OPEN_BY_BEHIND[Math.min(ctx.behind, 6)], late = ctx.behind <= 2;
-    const seatWhy = `From your seat, play roughly the best ${pct(openT)} of hands: more from the Dealer and Late seats, fewer from early ones.`;
+    const seatWhy = `From your seat, play ${rangeWords(openT)}: more from the Dealer and Late seats, fewer from early ones.`;
     if (ctx.kind === 'unopened') {
       size = fit(3 * BB_C);
       sizeWhy = 'A standard 3x raise ($0.60) builds the pot with your good hands without drawing much attention.';
@@ -1060,7 +1091,7 @@ function analyze(iters){
     spot = ctx.kind === 'unopened' ? 'open' : ctx.kind === 'limped' ? 'limped' : ctx.kind === 'bbOption' ? 'bb' : (S.level >= 2 || tc >= me.stack * 0.35) ? 'vs3bet' : 'vsraise';
     if (ctx.kind === 'unopened') {
       const openT = OPEN_BY_BEHIND[Math.min(ctx.behind, 6)];
-      const seatWhy = `Play tight: about the top 20% of hands at a 6-player table, more from the Dealer and Late seats (you act last after the flop) and fewer from early seats. From your seat that is roughly the best ${pct(openT)}.`;
+      const seatWhy = settings.odds === 'on' ? `Play tight: about the top 20% of hands at a 6-player table, more from the Dealer and Late seats (you act last after the flop) and fewer from early seats. From your seat that is roughly the best ${pct(openT)}.` : `Play tight: from your seat, play ${rangeWords(openT)}. Play more from the Dealer and Late seats (you act last after the flop) and fewer from early seats.`;
       size = fit(4 * BB_C);
       sizeWhy = 'Players here call raises a lot, so the usual 3x ($0.60) gets three or four callers. Raising to 4 big blinds thins the field, and you get paid when you hit.';
       if (p < openT) { good.add('raise'); label = `${hw}, playable from the ${me.pos} seat`; rule = `Rule: first in, raise to ${M(size)} (4 big blinds). Never limp first.`; why = `${seatWhy} ${sizeWhy}`; }
@@ -1278,7 +1309,7 @@ function analyze(iters){
   }
   if (!good.has('raise') && !ok.has('raise')) size = null;
   const shown = tc > 0 && eqR != null ? eqR : eq;
-  if (eq != null) why += req != null ? ` By the numbers, you win about ${pct(eqR)} and a call needs ${pct(req)}.` : ` By the numbers, you win about ${pct(eq)}${n > 1 ? ` against ${n} players` : ''}.`;
+  if (eq != null && settings.odds === 'on') why += req != null ? ` By the numbers, you win about ${pct(eqR)} and a call needs ${pct(req)}.` : ` By the numbers, you win about ${pct(eq)}${n > 1 ? ` against ${n} players` : ''}.`;
   const evCall = tc > 0 && eqR != null ? eqR * (pot + tc) - tc : null;
   const sizeLabel = size != null ? `${S.cur > 0 ? 'Raise to' : 'Bet'} ${money(size)}` : null;
   return { good, ok, why, short: `${label}. ${rule}`, eq: shown, eqR, req, evCall, tc, pot, n, size, sizeLabel, sizeWhy, spot };
@@ -1377,7 +1408,7 @@ const AVC = ['#3D6F92','#7B5E9C','#9B6A3C','#4D7F5E','#94505F','#4F62A0'];
 function seatHTML(p){
   const active = !S.over && S.toAct === p.i;
   const show = p.i === 0 || (S.over && (S.showdown || S.practiceDone) && !p.folded);
-  const cards = p.folded && p.i !== 0 ? '' : p.cards.map(c => show ? cardHTML(c) : cardHTML(c, { back: true })).join('');
+  const cards = p.folded && p.i !== 0 ? (S.over ? '' : '<span class="bubble k-fold foldtag">Folded</span>') : p.cards.map(c => show ? cardHTML(c) : cardHTML(c, { back: true })).join('');
   const shown = settings.labels === 'show' && p.i !== 0;
   const label = p.i === 0 ? 'You' : shown ? `<span class="tag-${p.prof.key}">${pname(p)}</span>` : pname(p);
   const av = p.i === 0 ? 'var(--accent)' : AVC[(p.i - 1) % AVC.length], ini = p.i === 0 ? 'Y' : pname(p).charAt(0);
@@ -1385,8 +1416,10 @@ function seatHTML(p){
   let tag = '';
   if (S.over && S.showdown && !p.folded && p.i !== 0) tag = describe(S.result.vals[p.i]);
   else if (S.practiceDone && !p.folded && p.i !== 0) tag = S.board.length ? describe(evalHand([...p.cards, ...S.board])) : cap(handWords(cellOf(...p.cards)));
-  else if (!p.folded) tag = p.allIn && !S.over ? 'All-in' : p.last;
-  const bubble = tag ? `<span class="bubble">${tag}</span>` : '';
+  let kind = '';
+  if (tag) kind = '';
+  else if (!p.folded) { tag = p.allIn && !S.over ? 'All-in' : p.last; kind = p.allIn && !S.over ? 'allin' : (p.lastKind || ''); }
+  const bubble = tag ? `<span class="bubble${kind ? ' k-' + kind : ''}">${tag}</span>` : '';
   const cls = `seat p-${POS_CLS[p.pos] || 'mid'}${p.i === 0 ? ' hero' : ''}${p.i === S.button ? ' is-btn' : ''}${active ? ' active' : ''}${p.folded ? ' folded' : ''}`;
   if (p.i === 0) {
     const sw = canSwipe();
@@ -1410,10 +1443,10 @@ function hudText(p){
 }
 function resultText(){
   const R = S.result;
-  if (R.fold) return R.w === 0 ? `Everyone folds. You win ${money(R.pot)}` : `Everyone folds. ${nm(S.pl[R.w])} wins ${money(R.pot)}`;
+  if (R.fold) return R.w === 0 ? `Everyone folds. You win ${money(R.pot)}` : `Everyone folds. ${pname(S.pl[R.w])} wins ${money(R.pot)}`;
   return R.pots.filter(pt => !pt.single || R.pots.length === 1).map((pt, k) => {
     const ws = pt.winners.map(i => S.pl[i]), label = R.pots.length > 1 ? (k === 0 ? 'Main pot: ' : 'Side pot: ') : '';
-    const names = ws.length > 1 ? `${ws.map(nm).join(' and ')} split` : `${nm(ws[0])} win${ws[0].i === 0 ? '' : 's'}`;
+    const short = w => w.i === 0 ? 'You' : pname(w), names = ws.length > 1 ? `${ws.map(short).join(' and ')} split` : `${short(ws[0])} win${ws[0].i === 0 ? '' : 's'}`;
     return `${label}${names} ${money(pt.amount)} with ${describe(pt.val).toLowerCase()}`;
   }).join('<br>');
 }
@@ -1429,7 +1462,7 @@ function placeChips(){
     if (i === 0) { const y = narrow.matches ? 64 : 67; for (const oy of [0, -12, 10]) for (const ox of [0, -64, 64, -104, 104]) cands.push([50, y, ox, oy]); }
     else {
       const a = (90 + i * 360 / S.n) * Math.PI / 180, tx = -Math.sin(a), ty = Math.cos(a);
-      for (const t of [0.6, 0.52, 0.68, 0.45, 0.75, 0.38, 0.3]) for (const o of [0, 22, -22, 44, -44]) { const [x, y] = seatXY(i, S.n, t); cands.push([x, y, tx * o, ty * o]); }
+      for (const t of [0.6, 0.52, 0.68, 0.45, 0.75, 0.38, 0.3, 0.82, 0.24]) for (const o of [0, 22, -22, 44, -44, 66, -66]) { const [x, y] = seatXY(i, S.n, t); cands.push([x, y, tx * o, ty * o]); }
     }
     let best = cands[0], bestCost = Infinity, bestRect = null;
     for (const c of cands) {
@@ -1534,15 +1567,18 @@ function renderStrip(){
   const e = log[0] && log[0].id === S.id ? log[0] : null;
   let html = '', tone = '';
   if (!S.over && S.toAct === 0 && !me.folded) {
-    const prev = skippedLine() + practiceBanner() + (e ? feedbackHTML(e, true) : '');
+    const prev = skippedLine() + practiceBanner() + (e ? feedbackHTML(e, true) : '') + beforeYou();
     const tc = toCall(me);
     if (quiz) {
       html = `${prev}<div><b>Your move.</b> ${tc > 0 ? `It costs ${money(tc)} to call, and the pot is ${money(potTotal())}.` : 'Nobody has bet yet.'} <span class="muted">The coach grades you after you act.</span></div>`;
     } else {
       const A = S.analysis;
-      html = `${prev}<div class="srow">${A.eq != null ? `<span class="nums"><b>${pct(A.eq)}</b> to win${A.req != null ? ` · need <b>${pct(A.req)}</b>` : ''}</span>` : ''}<span class="bestchip">Best: ${bestLabel(A)}</span></div>
-        ${A.eq != null ? minibar(A.eq, A.req) : ''}
-        <p class="swhy">${A.short} ${moreBtn()}</p>${ui.more ? `<p class="sfull">${A.why}</p>` : ''}`;
+      const odds = settings.odds === 'on' && A.eq != null;
+      html = odds
+        ? `${prev}<div class="srow"><span class="nums"><b>${pct(A.eq)}</b> to win${A.req != null ? ` · need <b>${pct(A.req)}</b>` : ''}</span><span class="bestchip">Best: ${bestLabel(A)}</span></div>
+        ${minibar(A.eq, A.req)}
+        <p class="swhy">${A.short} ${moreBtn()}</p>${ui.more ? `<p class="sfull">${A.why}</p>` : ''}`
+        : `${prev}<p class="swhy"><span class="bestchip inl">Best: ${bestLabel(A)}</span> ${A.short} ${moreBtn()}</p>${ui.more ? `<p class="sfull">${A.why}</p>` : ''}`;
     }
   } else if (e) {
     html = feedbackHTML(e, false); tone = e.g;
@@ -1557,10 +1593,28 @@ function renderStrip(){
   el.innerHTML = html;
 }
 
+// one line: what everyone has done this betting round, in order
+function beforeYou(){
+  let a = S.acts || [], word = S.street === 0 ? 'Before you' : `This round (${STREET[S.street].toLowerCase()})`;
+  // already acted this round? only show what happened since your last move
+  let mine = -1; for (let k = a.length - 1; k >= 0; k--) if (a[k].i === 0) { mine = k; break; }
+  if (mine >= 0) { word = `Since you ${a[mine].lbl.charAt(0).toLowerCase() + a[mine].lbl.slice(1)}`; a = a.slice(mine + 1); }
+  if (!a.length) return `<div class="before"><span class="muted">${word}:</span> you are first to act.</div>`;
+  // group players who did the same thing, in the order it first happened: "Rowan, Morgan called big blind"
+  const groups = [], folds = a.filter(x => x.kind === 'fold').length;
+  for (const x of a) {
+    if (x.kind === 'fold') continue;
+    const who = x.i === 0 ? 'You' : pname(S.pl[x.i]), g = groups.find(y => y.lbl === x.lbl && y.last === groups.length - 1);
+    if (g && groups[groups.length - 1] === g) g.names.push(who); else groups.push({ lbl: x.lbl, kind: x.kind, names: [who], last: groups.length });
+  }
+  const parts = groups.map(g => `<span class="act k-${g.kind}">${g.names.join(', ')} ${g.lbl.charAt(0).toLowerCase() + g.lbl.slice(1)}</span>`);
+  if (folds) parts.push(`<span class="act k-fold">${folds} folded</span>`);
+  return `<div class="before"><span class="muted">${word}:</span> ${parts.join(' ')}</div>`;
+}
 function skippedLine(){
   const k = ui.skipped.length; if (!k) return '';
   const shown = ui.skipped.slice(-4).map(c => `<span class="nowrap">${minis(c)}</span>`).join(' ');
-  return `<div class="prev"><span class="pill skip">Skipped</span><span>${k} junk hand${k === 1 ? '' : 's'} folded for you: ${shown}${k > 4 ? ' …' : ''}</span></div>`;
+  return `<div class="skipline">Skipped ${k} junk hand${k === 1 ? '' : 's'}: ${shown}${k > 4 ? ' …' : ''}</div>`;
 }
 function practiceBanner(){
   if (S.notice) return `<div class="prev"><span class="muted">${S.notice}</span></div>`;
@@ -1660,6 +1714,7 @@ const WORDS = `<dl class="gloss">
   <dt>Raise</dt><dd>Making the bet bigger. A raise "to $0.60" means your total bet becomes $0.60.</dd>
   <dt>All-in</dt><dd>Betting all of your chips.</dd>
   <dt>Flop, turn, river</dt><dd>The shared cards: three at once (flop), then one more (turn), then the last one (river).</dd>
+  <dt>Show odds</dt><dd>Off by default. Turn it on in Settings, Coach to see how often your hand wins and what a call needs, as percentages, in the coach panel and explanations.</dd>
   <dt>To win</dt><dd>How often your hand wins by the river against what the other players might hold.</dd>
   <dt>Need</dt><dd>How often a call has to win to pay for itself. Calling $1 into a $3 pot means you pay $1 to win $4, so you need to win 1 time in 4 (25%).</dd>
   <dt>Suited</dt><dd>Both of your cards are the same suit.</dd>
