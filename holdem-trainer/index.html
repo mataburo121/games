@@ -76,7 +76,7 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 /* the betting line printed on real felt */
 .felt::after{content:"";position:absolute;inset:11% 9%;border-radius:999px;border:1.5px solid var(--felt-line)}
 @media (max-width:640px){
-  .tablewrap{aspect-ratio:auto;flex:1 1 auto;height:auto;min-height:300px;--cw:24px}
+  .tablewrap{aspect-ratio:auto;flex:1 1 auto;height:auto;min-height:300px;--cw:24px;margin-top:40px}
   .felt{inset:9% 5% 15%;border-radius:130px;border-width:9px}
   .felt::after{inset:7% 9%;border-radius:110px}
 }
@@ -193,11 +193,12 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 
 /* dock: coach strip + actions, pinned to the bottom of the screen */
 .dock{position:sticky;bottom:0;z-index:5;display:flex;flex-direction:column;gap:8px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+@media (max-width:640px) and (max-height:720px){.strip{height:128px !important}.tablewrap{margin-top:30px !important}}
 /* phones: coach on top, table fills the middle, actions under your thumb; the play area is one screen tall */
 @media (max-width:640px){
   .play{height:max(570px,calc(100svh - 62px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));gap:8px}
   .dock{display:contents}
-  .strip{order:-1;flex:none;height:158px;overflow-y:auto;overscroll-behavior:contain;padding:9px 12px;font-size:13.5px}
+  .strip{order:-1;flex:none;position:relative;z-index:6;height:158px;overflow-y:auto;overscroll-behavior:contain;padding:9px 12px;font-size:13.5px}
   .strip .swhy{font-size:13px;margin-top:4px}.strip .prev{padding-bottom:6px;margin-bottom:6px}.strip .minibar{margin:6px 0 2px}
   .actions{position:sticky;bottom:0;z-index:5;flex:none;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
 }
@@ -314,7 +315,7 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
     </div></section>
     <section class="sgroup"><h2>Coach</h2><div class="row">
       <div class="ctl"><span class="ctl-label">Show odds</span>
-      <div class="seg" data-key="odds" role="group" aria-label="Show win and pot odds percentages"><button type="button" data-val="off">Off</button><button type="button" data-val="on">On</button></div></div>
+      <div class="seg" data-key="showOdds" role="group" aria-label="Show win and pot odds at the top of the coach panel"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
       <div class="ctl"><span class="ctl-label">Style</span>
       <div class="seg" data-key="style" role="group" aria-label="Coach style"><button type="button" data-val="friendly" title="Raise less often and smaller; limp with speculative hands">Friendly</button><button type="button" data-val="max" title="Raise more and bigger to win the most money">Max win</button></div></div>
       <div class="ctl"><span class="ctl-label">Mode</span>
@@ -570,7 +571,7 @@ const store = {
 };
 const blankStats = () => ({ hands: 0, net: 0, decisions: 0, good: 0, ok: 0, bad: 0, leak: 0, spots: {} });
 const saved = store.get() || {};
-const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on', style: 'friendly', carry: 'on', odds: 'off' }, saved.settings || {});
+const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on', style: 'friendly', carry: 'on', showOdds: 'on' }, saved.settings || {});
 let stats = Object.assign(blankStats(), saved.stats || {});
 let log = Array.isArray(saved.log) ? saved.log : [];
 let redo = Array.isArray(saved.redo) ? saved.redo : []; // missed spots saved for replay
@@ -1029,7 +1030,7 @@ function handClass(hole, board){
   return { kind, draw, hi: h[0], label: names[kind] + (draw ? dn[draw] : '') };
 }
 
-const rangeWords = t => settings.odds === 'on' ? `roughly the best ${pct(t)} of hands` : t >= 0.3 ? 'a fairly wide range of decent hands' : t >= 0.2 ? 'your better hands' : t >= 0.13 ? 'only good hands' : 'only strong hands';
+const rangeWords = t => t >= 0.3 ? 'a fairly wide range of decent hands' : t >= 0.2 ? 'your better hands' : t >= 0.13 ? 'only good hands' : 'only strong hands';
 function analyze(iters){
   const me = S.pl[0], tc = toCall(me), pot = potTotal(), cr = canRaise(me), st = S.street, ctx = preCtx(me);
   let opps = S.pl.filter(o => o.i !== 0 && !o.folded && o.entered);
@@ -1106,7 +1107,7 @@ function analyze(iters){
     spot = ctx.kind === 'unopened' ? 'open' : ctx.kind === 'limped' ? 'limped' : ctx.kind === 'bbOption' ? 'bb' : (S.level >= 2 || tc >= me.stack * 0.35) ? 'vs3bet' : 'vsraise';
     if (ctx.kind === 'unopened') {
       const openT = OPEN_BY_BEHIND[Math.min(ctx.behind, 6)];
-      const seatWhy = settings.odds === 'on' ? `Play tight: about the top 20% of hands at a 6-player table, more from the Dealer and Late seats (you act last after the flop) and fewer from early seats. From your seat that is roughly the best ${pct(openT)}.` : `Play tight: from your seat, play ${rangeWords(openT)}. Play more from the Dealer and Late seats (you act last after the flop) and fewer from early seats.`;
+      const seatWhy = `Play tight: from your seat, play ${rangeWords(openT)}. Play more from the Dealer and Late seats (you act last after the flop) and fewer from early seats.`;
       size = fit(4 * BB_C);
       sizeWhy = 'Players here call raises a lot, so the usual 3x ($0.60) gets three or four callers. Raising to 4 big blinds thins the field, and you get paid when you hit.';
       if (p < openT) { good.add('raise'); label = `${hw}, playable from the ${me.pos} seat`; rule = `Rule: first in, raise to ${M(size)} (4 big blinds). Never limp first.`; why = `${seatWhy} ${sizeWhy}`; }
@@ -1337,8 +1338,7 @@ function analyze(iters){
   }
   if (!good.has('raise') && !ok.has('raise')) size = null;
   const shown = tc > 0 && eqR != null ? eqR : eq;
-  if (eq != null && settings.odds === 'on' && st === 0 && ctx && ctx.kind !== 'facing' && ctx.behind > 0) why += ` (These numbers only count players already in the pot; ${ctx.behind} more still to act.)`;
-  if (eq != null && settings.odds === 'on') why += req != null ? ` By the numbers, you win about ${pct(eqR)} and a call needs ${pct(req)}.` : ` By the numbers, you win about ${pct(eq)}${n > 1 ? ` against ${n} players` : ''}.`;
+  // the win / need numbers live at the top of the coach panel, not in the written explanation
   const evCall = tc > 0 && eqR != null ? eqR * (pot + tc) - tc : null;
   const sizeLabel = size != null ? `${S.cur > 0 ? 'Raise to' : 'Bet'} ${money(size)}` : null;
   return { good, ok, why, short: `${label}. ${rule}`, eq: shown, eqR, req, evCall, tc, pot, n, size, sizeLabel, sizeWhy, spot };
@@ -1607,7 +1607,7 @@ function renderStrip(){
       html = `${prev}<div><b>Your move.</b> ${tc > 0 ? `It costs ${money(tc)} to call, and the pot is ${money(potTotal())}.` : 'Nobody has bet yet.'} <span class="muted">The coach grades you after you act.</span></div>`;
     } else {
       const A = S.analysis;
-      const odds = settings.odds === 'on' && A.eq != null;
+      const odds = settings.showOdds !== 'off' && A.eq != null;
       html = odds
         ? `${prev}<div class="srow"><span class="nums"><b>${pct(A.eq)}</b> to win${A.req != null ? ` · need <b>${pct(A.req)}</b>` : ''}</span><span class="bestchip">Best: ${bestLabel(A)}</span></div>
         ${minibar(A.eq, A.req)}
@@ -1748,7 +1748,7 @@ const WORDS = `<dl class="gloss">
   <dt>Raise</dt><dd>Making the bet bigger. A raise "to $0.60" means your total bet becomes $0.60.</dd>
   <dt>All-in</dt><dd>Betting all of your chips.</dd>
   <dt>Flop, turn, river</dt><dd>The shared cards: three at once (flop), then one more (turn), then the last one (river).</dd>
-  <dt>Show odds</dt><dd>Off by default. Turn it on in Settings, Coach to see how often your hand wins and what a call needs, as percentages, in the coach panel and explanations.</dd>
+  <dt>Show odds</dt><dd>On by default: the top of the coach panel shows how often your hand wins and what a call needs. Before the flop these only count players already in the pot, so they can look better than the hand really is; the coach's advice there comes from hand-strength rules. Turn them off in Settings, Coach.</dd>
   <dt>To win</dt><dd>How often your hand wins by the river against what the other players might hold.</dd>
   <dt>Need</dt><dd>How often a call has to win to pay for itself. Calling $1 into a $3 pot means you pay $1 to win $4, so you need to win 1 time in 4 (25%).</dd>
   <dt>Suited</dt><dd>Both of your cards are the same suit.</dd>
