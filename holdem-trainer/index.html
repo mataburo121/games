@@ -76,7 +76,7 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 /* the betting line printed on real felt */
 .felt::after{content:"";position:absolute;inset:11% 9%;border-radius:999px;border:1.5px solid var(--felt-line)}
 @media (max-width:640px){
-  .tablewrap{aspect-ratio:auto;min-height:0;height:clamp(340px,calc(100svh - 300px),480px);--cw:24px}
+  .tablewrap{aspect-ratio:auto;flex:1 1 auto;height:auto;min-height:300px;--cw:24px}
   .felt{inset:9% 5% 15%;border-radius:130px;border-width:9px}
   .felt::after{inset:7% 9%;border-radius:110px}
 }
@@ -94,7 +94,7 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .seat.active .plate{box-shadow:0 0 0 2px var(--gold),0 0 22px -2px color-mix(in srgb,var(--gold) 70%,transparent)}
 .seat.folded{opacity:.42}
 @media (max-width:640px){
-  .seat{width:86px;gap:3px}.seat.hero{width:150px;--cw:38px}
+  .seat{width:86px;gap:3px}.seat.hero{width:150px;--cw:44px}
   .av{display:none}
   .plate{border-radius:12px;padding:3px 6px;justify-content:center}
   .pinfo{align-items:center;text-align:center}
@@ -154,6 +154,14 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 
 /* dock: coach strip + actions, pinned to the bottom of the screen */
 .dock{position:sticky;bottom:0;z-index:5;display:flex;flex-direction:column;gap:8px;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding-top:8px;padding-bottom:calc(8px + env(safe-area-inset-bottom,0px))}
+/* phones: coach on top, table fills the middle, actions under your thumb; the play area is one screen tall */
+@media (max-width:640px){
+  .play{height:max(570px,calc(100svh - 62px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px)));gap:8px}
+  .dock{display:contents}
+  .strip{order:-1;flex:none;height:136px;overflow-y:auto;overscroll-behavior:contain;padding:9px 12px;font-size:13.5px}
+  .strip .swhy{font-size:13px;margin-top:4px}.strip .prev{padding-bottom:6px;margin-bottom:6px}.strip .minibar{margin:6px 0 2px}
+  .actions{position:sticky;bottom:0;z-index:5;flex:none;background:color-mix(in srgb,var(--bg) 82%,transparent);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);padding-bottom:calc(6px + env(safe-area-inset-bottom,0px))}
+}
 .strip{background:var(--surface);border-radius:16px;padding:11px 14px;font-size:14px;box-shadow:var(--shadow)}
 .strip.good{background:color-mix(in srgb,var(--good) 7%,var(--surface));box-shadow:0 0 0 1px color-mix(in srgb,var(--good) 35%,transparent)}
 .strip.bad{background:color-mix(in srgb,var(--bad) 7%,var(--surface));box-shadow:0 0 0 1px color-mix(in srgb,var(--bad) 35%,transparent)}
