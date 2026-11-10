@@ -1048,7 +1048,10 @@ function handClass(hole, board){
   else if (cat === 1 && bc === 0) kind = pairKind(br);
   const names = { monster: describe(v), tptk: 'Top pair, top kicker', overpair: 'Overpair', toppair: 'Top pair, weak kicker', middle: 'Middle pair', bottom: 'Bottom pair', nothing: `No pair (${RN[h[0]]} high)` };
   const dn = { flush: ' + flush draw', oesd: ' + open-ended straight draw', gutshot: ' + gutshot straight draw' };
-  return { kind, draw, hi: h[0], label: names[kind] + (draw ? dn[draw] : '') };
+  let label = names[kind];
+  if (cat === 2 && bc === 1 && kind !== 'monster') label = `${describe(v)}, but one pair is on the board, so it plays like ${names[kind].toLowerCase()}`;
+  else if (kind === 'nothing' && bc >= 1) label = `Only the board's ${bc === 1 ? 'pair' : 'pairs'} (${RN[h[0]]} high)`;
+  return { kind, draw, hi: h[0], label: label + (draw ? dn[draw] : '') };
 }
 
 const rangeWords = t => t >= 0.3 ? 'a fairly wide range of decent hands' : t >= 0.2 ? 'your better hands' : t >= 0.13 ? 'only good hands' : 'only strong hands';
@@ -1074,14 +1077,14 @@ function analyze(iters){
   const fit = v => rb ? Math.max(rb.min, Math.min(rb.max, r10(v))) : null;
   const potFrac = fr => fit(S.cur + fr * (pot + tc));
   const M = v => v != null ? money(v) : 'all-in';
-  let label = '', rule = '', why = '', size = null, sizeWhy = '', spot = '', postWarn = '', postDown = false;
+  let label = '', rule = '', why = '', size = null, sizeWhy = '', spot = '', postWarn = '', postDown = false, postSrc = '';
 
   if (st === 0 && settings.style === 'friendly' && ctx.kind !== 'facing') {
     // Friendly style: 3x raises, mostly saved for strong hands; limp speculative hands; raise limpers only with premiums
     const cell = cellOf(...me.cards), nc = cellName(cell), p = PCT[cell], hw = cap(handWords(cell)), L = S.limpers;
     spot = ctx.kind === 'unopened' ? 'open' : ctx.kind === 'limped' ? 'limped' : 'bb';
-    const openT = OPEN_BY_BEHIND[Math.min(ctx.behind, 6)], late = me.pos === 'Late' || me.pos === 'Dealer' || ctx.behind <= 2;
-    const seatWhy = `From your seat, play ${rangeWords(openT)}: more from the Dealer and Late seats, fewer from early ones.`;
+    const openT = OPEN_BY_BEHIND[Math.min(ctx.behind, 6)], late = me.pos === 'Late' || me.pos === 'Dealer', sbCheap = me.pos === 'Small blind';
+    const seatWhy = ctx.behind <= 1 ? 'Everyone else folded, so only the big blind is left and you can play more hands than usual.' : `From your seat, play ${rangeWords(openT)}: more from the Dealer and Late seats, fewer from early ones.`;
     if (ctx.kind === 'unopened') {
       size = fit(3 * BB_C);
       sizeWhy = 'A standard 3x raise ($0.60) builds the pot with your good hands without drawing much attention.';
@@ -1110,10 +1113,10 @@ function analyze(iters){
         rule = 'Limp behind with small pairs, suited aces and suited connectors.';
         why = `${limpWord}, so it is cheap to see a flop. When these hands hit big, passive players pay you off. If you miss, let it go.`;
       } else if (BIG_OFFSUIT.has(nc) && p < openT) {
-        if (late) { good.add('call'); ok.add('fold'); ok.add('raise'); } else { good.add('fold'); ok.add('call'); }
+        if (late || sbCheap) { good.add('call'); ok.add('fold'); ok.add('raise'); } else { good.add('fold'); ok.add('call'); }
         label = `${hw}, a trap hand in a limped pot`;
-        rule = late ? 'Limp behind from a late seat. Be careful with one pair.' : 'Fold. Offsuit big cards play badly in big multiway pots.';
-        why = `Offsuit big cards often make top pair with a weak kicker, which loses the most money in home games. ${late ? 'From a late seat a cheap look is fine; just don\'t get attached to one pair.' : 'With several players still to act behind you, let it go.'}`;
+        rule = late ? 'Limp behind from a late seat. Be careful with one pair.' : sbCheap ? 'Call the extra $0.10. Be careful with one pair.' : 'Fold. Offsuit big cards play badly in big multiway pots.';
+        why = `Offsuit big cards often make top pair with a weak kicker, which loses the most money in home games. ${late ? 'From a late seat a cheap look is fine; just don\'t get attached to one pair.' : sbCheap ? 'From the small blind it only costs $0.10 more, but you will act first after the flop, so play carefully.' : 'With several players still to act behind you, let it go.'}`;
       } else if (p < openT) {
         good.add('call'); ok.add('raise'); label = `${hw}, a hand worth playing`;
         rule = 'Limp behind. A raise is fine sometimes.'; why = `${limpWord}. Friendly style keeps the pot small with medium hands and saves raises for big ones.`;
@@ -1136,7 +1139,7 @@ function analyze(iters){
       else if (p < openT * 1.25) { good.add('fold'); ok.add('raise'); label = `${hw}, just outside your range from this seat`; rule = 'Rule: play tight. Fold.'; why = `${seatWhy} This hand is close, so a raise is not a big mistake, but folding is the disciplined play.`; }
       else { good.add('fold'); label = `${hw}, too weak from this seat`; rule = 'Rule: play tight. Fold.'; why = `${seatWhy} Folding bad hands keeps the odds on your side. It feels boring, but it is how you win at these stakes.`; }
     } else if (ctx.kind === 'limped') {
-      const openT = OPEN_BY_BEHIND[Math.min(ctx.behind, 6)], late = me.pos === 'Late' || me.pos === 'Dealer' || ctx.behind <= 2;
+      const openT = OPEN_BY_BEHIND[Math.min(ctx.behind, 6)], late = me.pos === 'Late' || me.pos === 'Dealer';
       const limpWord = `${L} player${L === 1 ? '' : 's'} limped in (just called the big blind)`;
       size = fit((4 + L) * BB_C);
       sizeWhy = `Raise 4 big blinds plus 1 for each limper (${M(size)}). Limpers here call almost any raise, so a small raise only builds a big multiway pot where your hand is no longer the favorite.`;
@@ -1199,7 +1202,7 @@ function analyze(iters){
         size = fit(S.cur * 3 + callers * S.cur);
         label = `${hw} against a raise from the ${rpos} seat`;
         good.add(CALLERS.has(nc) ? 'call' : 'fold'); ok.add('raise');
-        rule = 'Rule: late-seat raises are often steals, so a re-raise is OK here.';
+        rule = CALLERS.has(nc) ? 'Call. Late-seat raises are often steals, so a re-raise is also fine.' : 'Fold, or re-raise as a bluff. Late-seat raises are often steals.';
         why = 'Raises from the Late or Dealer seat, or small blind against big blind, are often attempts to steal the blinds, so you can re-raise some non-premium hands like this one.';
       } else if (CALLERS.has(nc)) {
         if (passiveR && BIG_OFFSUIT.has(nc)) {
@@ -1209,7 +1212,7 @@ function analyze(iters){
         } else {
           good.add('call'); ok.add('fold'); label = `${hw}, on the calling list`;
           rule = 'Rule: call with small pairs, big cards and suited connectors.';
-          why = `Hands like AJ, AT, KQ, KJ, QJ and suited connectors are worth a call to see a flop${callers ? ', and with other callers the pot is already big' : ''}. Without the betting lead it is harder to win, so be ready to let go if you miss.`;
+          why = `Hands like A-J, A-10, K-Q, K-J, Q-J and suited connectors are worth a call to see a flop${callers ? ', and with other callers the pot is already big' : ''}. Without the betting lead it is harder to win, so be ready to let go if you miss.`;
         }
       } else { good.add('fold'); label = `${hw}, not on the calling list`; rule = 'Rule: keep your calling range tight. Fold.'; why = 'Against a raise, only continue with premium hands or the hands on the calling list (small pairs, big cards, suited connectors).'; }
     }
@@ -1223,12 +1226,14 @@ function analyze(iters){
     const H = Object.assign({}, H0, { kind: K });
     const strong = H.kind === 'monster' || H.kind === 'tptk' || H.kind === 'overpair';
     const tp = H.kind === 'toppair', mid = H.kind === 'middle';
+    const pairName = H0.kind === 'overpair' ? 'your overpair' : H0.kind === 'tptk' ? 'top pair, top kicker' : 'top pair';
+    const pairCap = H0.kind === 'overpair' ? 'An overpair' : H0.kind === 'tptk' ? 'Top pair, top kicker' : 'Top pair with a weak kicker';
     const goodDraw = H.draw === 'flush' || H.draw === 'oesd';
     const lead = S.pfr === 0, flopBet = !!S.heroAgg[1];
     const wet = boardWet(S.board), stName = STREET[st].toLowerCase();
     const foldy = n === 1 && (kinds[0] === 'rock' || kinds[0] === 'reg');
     label = H0.label;
-    postWarn = warn; postDown = K === 'middle' && H0.kind !== 'middle';
+    postWarn = warn; postDown = K === 'middle' && H0.kind !== 'middle'; postSrc = T.warn ? 'board' : 'read';
     spot = tc === 0 ? (strong || tp ? 'value' : 'weak') : strong ? 'facestrong' : tp || mid ? 'facepair' : 'facedraw';
     if (tc === 0) {
       if (strong) {
@@ -1240,14 +1245,14 @@ function analyze(iters){
       } else if (tp && (st < 3 || station || allPassive || S.bets[1] === false || S.bets[2] === false)) {
         const fr = n >= 3 && wet && !postWarn ? 0.66 : 0.5;
         size = potFrac(fr); good.add('raise'); ok.add('check');
-        rule = `Exploit: bet top pair for value, ${M(size)} (${FRAC(fr)}).`;
+        rule = `Exploit: bet ${pairName} for value, ${M(size)} (${FRAC(fr)}).`;
         sizeWhy = 'A medium bet gets called by worse pairs and draws without building a pot you can\'t handle.';
         why = st === 3
           ? `On the river, ${station ? 'calling stations call with second pair and worse' : 'passive players call with worse pairs'}, so a thin value bet makes money. ${sizeWhy}`
           : `Passive players won't bet for you: if you check, the pot stays small and they see the next card for free. ${sizeWhy} If a passive player raises you, believe them and slow down.`;
       } else if (tp) {
         good.add('check'); ok.add('raise'); size = potFrac(0.5);
-        rule = 'Check. On the river after betting every street, bet only top pair, top kicker or better.';
+        rule = 'Check. When there has been a bet on every street, bet the river only with top pair, top kicker or better.';
         why = 'After three bets, the players still calling usually have you beat or will fold anything worse.';
       } else if (mid) {
         good.add('check');
@@ -1306,24 +1311,24 @@ function analyze(iters){
           why = `${bk === 'maniac' ? 'The maniac bets with lots of weaker hands. ' : ''}Your hand is strong, so build the pot while you are ahead and charge their draws. ${sizeWhy}`;
         } else {
           good.add('call'); if (cr) ok.add('raise'); rule = 'Call. On the river, raise only with two pair or better.';
-          why = 'Top pair, top kicker is strong, but a river bet is often a better hand.';
+          why = 'Top pair, top kicker is strong, but a river bet often means a better hand.';
         }
       } else if (tp || mid) {
         if (passiveBettor && raisedMe) {
           good.add('fold'); if (!tooBig) ok.add('call');
           rule = `Fold. A raise from a ${btag} means a strong hand.`;
-          why = `Players who check and call almost everything save their raises for real hands. ${tp ? 'Top pair with a weak kicker' : 'Middle pair'} is behind nearly all of them.`;
+          why = `Players who check and call almost everything save their raises for real hands. ${tp ? pairCap : 'Middle pair'} is behind nearly all of them.`;
         } else if (passiveBettor && late) {
           const priced = eqR != null && eqR >= req;
           if (priced) { good.add('call'); ok.add('fold'); } else { good.add('fold'); ok.add('call'); }
           rule = priced ? `Call. A ${btag} betting the ${stName} is usually strong, but the price is good enough.` : `Fold. A ${btag} betting the ${stName} usually has you beat.`;
-          why = `When a ${btag} bets the ${stName}, most of the time they have a real hand, but they do take a stab now and then (often after everyone checks). So it comes down to the price: call when the pot pays enough to cover the times they have it, fold when it doesn't. ${tp ? 'Top pair with a weak kicker' : 'Middle pair'} only beats their bluffs.`;
+          why = `When a ${btag} bets the ${stName}, most of the time they have a real hand, but they do take a stab now and then (often after everyone checks). So it comes down to the price: call when the pot pays enough to cover the times they have it, fold when it doesn't. ${tp ? pairCap : 'Middle pair'} only beats their bluffs.`;
         } else if (tooBig) {
           good.add('fold'); ok.add('call'); rule = 'Normally a call, but this bet is too big for your hand. Fold.'; why = 'One pair is worth a call at a normal price, not a big one.';
         } else {
           good.add('call'); if (bk === 'maniac' && cr) ok.add('raise');
-          rule = tp ? 'Rule: call with top pair.' : 'Rule: call with middle pair against a small bet.';
-          why = bk === 'maniac' ? 'The maniac bets with lots of weaker hands, so your pair is often good.' : 'Your pair is good enough to call a flop bet, but not to raise. Be ready to fold if they keep betting on the turn and river.';
+          rule = tp ? `Rule: call with ${pairName}.` : 'Rule: call with middle pair against a small bet.';
+          why = bk === 'maniac' ? 'The maniac bets with lots of weaker hands, so your pair is often good.' : (st === 1 ? 'Your pair is good enough to call a flop bet, but not to raise. Be ready to fold if they keep betting on the turn and river.' : `Your pair is good enough to call this ${STREET[st].toLowerCase()} bet at this price, but not to raise.`);
         }
       } else if (goodDraw && st < 3) {
         const implied = station || allPassive;
@@ -1360,7 +1365,8 @@ function analyze(iters){
   }
   if (st > 0 && postWarn) {
     if (postDown) {
-      rule = tc === 0 ? 'Check. This board is dangerous for your hand.' : good.has('call') ? 'Call a small bet, but fold to big ones. This board is dangerous for your hand.' : 'Fold. This board is dangerous for your hand.';
+      const reason = postSrc === 'board' ? 'This board is dangerous for your hand.' : 'The way they played suggests you are behind.';
+      rule = tc === 0 ? `Check. ${reason}` : good.has('call') ? `Call a small bet, but fold to big ones. ${reason}` : `Fold. ${reason}`;
       why = `${postWarn} ${tc === 0 ? 'Check and try to get to showdown cheaply.' : good.has('call') ? 'A small bet is worth a call; a big bet usually means they have it.' : 'Let it go and wait for a better spot.'}`;
     } else why = `${postWarn} ${why}`;
   }
