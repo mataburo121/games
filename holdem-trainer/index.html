@@ -46,7 +46,8 @@ button,select,input{font:inherit;color:inherit}
 header.top{display:flex;gap:12px;align-items:center;justify-content:space-between}
 header h1{margin:0;display:flex;align-items:center;gap:10px;font-family:var(--font-display);font-weight:700;font-size:clamp(18px,2.4vw,24px);letter-spacing:-.02em;line-height:1.15;min-width:0;text-wrap:balance}
 .mark{flex:none;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle,var(--accent) 0 38%,var(--surface) 39% 46%,transparent 47%),repeating-conic-gradient(var(--accent) 0 22.5deg,var(--surface) 0 45deg);box-shadow:0 0 0 2px var(--accent)}
-.hdr-r{display:flex;align-items:center;gap:10px;flex:none}
+.hdr-r{display:flex;align-items:center;gap:10px;flex:none;margin-left:auto}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .sum{font:600 12px var(--font-mono);color:var(--muted);white-space:nowrap;font-variant-numeric:tabular-nums}
 .iconbtn{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 14px;font-weight:600;font-size:13px;cursor:pointer;box-shadow:var(--shadow)}
 .iconbtn[aria-expanded="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
@@ -99,8 +100,19 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
   .pinfo{align-items:center;text-align:center}
   .pn{font-size:11px}.pm{font-size:10px;justify-content:center}.pm b{font-size:10px}.hud{font-size:9.5px;text-align:center}
 }
+/* seat position, colored by how good the seat is after the flop */
+.pos{display:inline-block;font:600 10px/1.5 var(--font-body);letter-spacing:.03em;border-radius:999px;padding:0 6px;color:var(--pc);background:color-mix(in srgb,var(--pc) 18%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pc) 40%,transparent)}
+.pos.early{--pc:#F39A8A} .pos.mid{--pc:#EBCB72} .pos.late{--pc:#7FD8A6} .pos.blind{--pc:#A9BACB}
+.pos.dlr{--pc:var(--gold);background:var(--gold);color:var(--gold-ink);box-shadow:none}
+.seat.hero .pos{font-size:11.5px;padding:1px 9px}
+.seat.is-btn .plate{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 70%,transparent),0 8px 20px -6px rgba(0,0,0,.5)}
+.seat.is-btn.active .plate{box-shadow:0 0 0 2px var(--gold),0 0 22px -2px color-mix(in srgb,var(--gold) 70%,transparent)}
+/* the dealer button rides on the dealer's name tag */
+.plate{position:relative}
+.dbtn{position:absolute;top:-13px;right:-9px;z-index:2;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;background:radial-gradient(circle at 35% 30%,#FFFFFF,#E5E1D6);color:#141414;font:800 13px var(--font-display);box-shadow:0 0 0 2px var(--gold),0 0 0 5px color-mix(in srgb,var(--gold) 28%,transparent),0 4px 10px rgba(0,0,0,.45)}
+.seat.left .dbtn{right:auto;left:-9px}
+@media (max-width:640px){.dbtn{width:22px;height:22px;font-size:11px;top:-10px;right:-7px}.seat.left .dbtn{right:auto;left:-7px}.pos{font-size:9px;padding:0 5px}.seat.hero .pos{font-size:10.5px}}
 .tag-reg{color:var(--t-reg)} .tag-rock{color:var(--t-rock)} .tag-maniac{color:var(--t-maniac)} .tag-station{color:var(--t-station)}
-.dealer{width:16px;height:16px;flex:none;border-radius:50%;background:var(--card);color:var(--card-ink);font:800 9.5px/16px var(--font-display);text-align:center;box-shadow:0 1px 2px rgba(0,0,0,.4)}
 .made{font:600 12px var(--font-body);color:var(--felt-ink);background:var(--plate);border:1px solid var(--felt-line);border-radius:999px;padding:1px 10px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cards{display:flex;gap:3px;min-height:calc(var(--cw)*1.4)}
 .seat.hero .cards{gap:6px}
@@ -223,7 +235,7 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
 
 <div class="app">
   <header class="top">
-    <h1><span class="mark" aria-hidden="true"></span>Home Game Hold'em Trainer</h1>
+    <h1 class="sr-only">Home Game Hold'em Trainer</h1>
     <div class="hdr-r"><span class="sum" id="sum"></span><button type="button" class="iconbtn" id="setBtn" aria-expanded="false" aria-controls="settings">Settings</button></div>
   </header>
   <div class="panel settings" id="settings" hidden>
@@ -1228,6 +1240,9 @@ function heroMade(){
   if (S.board.length) return describe(evalHand([...me.cards, ...S.board]));
   return cap(handWords(cellOf(...me.cards)));
 }
+const POS_CLS = { 'Early': 'early', 'Middle': 'mid', 'Late': 'late', 'Dealer': 'dlr', 'Small blind': 'blind', 'Big blind': 'blind' };
+const POS_TIP = { early: 'Acts early after the flop: play tight', mid: 'Middle seat', late: 'Acts late after the flop: a good seat', dlr: 'Dealer: acts last after the flop, the best seat', blind: 'Blind: acts first after the flop' };
+const posPill = pos => { const c = POS_CLS[pos] || 'mid'; return `<span class="pos ${c}" title="${POS_TIP[c]}">${pos}</span>`; };
 // avatar colors follow the seat, not the player type, so they never give a type away
 const AVC = ['#3D6F92','#7B5E9C','#9B6A3C','#4D7F5E','#94505F','#4F62A0'];
 function seatHTML(p){
@@ -1237,16 +1252,16 @@ function seatHTML(p){
   const shown = settings.labels === 'show' && p.i !== 0;
   const label = p.i === 0 ? 'You' : shown ? `<span class="tag-${p.prof.key}">${pname(p)}</span>` : pname(p);
   const av = p.i === 0 ? 'var(--accent)' : AVC[(p.i - 1) % AVC.length], ini = p.i === 0 ? 'Y' : pname(p).charAt(0);
-  const plate = `<div class="plate"><span class="av" style="--av:${av}" aria-hidden="true">${ini}</span><div class="pinfo"><div class="pn">${label}${p.i === S.button ? '<span class="dealer" title="Dealer button">D</span>' : ''}</div><div class="pm"><span>${p.pos}</span><b>${money(p.stack)}</b></div>${shown ? `<div class="hud tag-${p.prof.key}">${p.prof.name}</div>` : p.i !== 0 ? hudLine(p) : ''}</div></div>`;
+  const plate = `<div class="plate">${p.i === S.button ? '<span class="dbtn" title="Dealer button: this seat acts last after the flop">D</span>' : ''}<span class="av" style="--av:${av}" aria-hidden="true">${ini}</span><div class="pinfo"><div class="pn">${label}</div><div class="pm">${posPill(p.pos)}<b>${money(p.stack)}</b></div>${shown ? `<div class="hud tag-${p.prof.key}">${p.prof.name}</div>` : p.i !== 0 ? hudLine(p) : ''}</div></div>`;
   let tag = '';
   if (S.over && S.showdown && !p.folded && p.i !== 0) tag = describe(S.result.vals[p.i]);
   else if (S.practiceDone && !p.folded && p.i !== 0) tag = S.board.length ? describe(evalHand([...p.cards, ...S.board])) : cap(handWords(cellOf(...p.cards)));
   else if (!p.folded) tag = p.allIn && !S.over ? 'All-in' : p.last;
   const bubble = tag ? `<span class="bubble">${tag}</span>` : '';
-  const cls = `seat${p.i === 0 ? ' hero' : ''}${active ? ' active' : ''}${p.folded ? ' folded' : ''}`;
+  const cls = `seat${p.i === 0 ? ' hero' : ''}${p.i === S.button ? ' is-btn' : ''}${active ? ' active' : ''}${p.folded ? ' folded' : ''}`;
   if (p.i === 0) return `<div class="${cls}" style="left:50%"><div class="cards">${cards}</div><div class="made">${heroMade()}</div>${plate}</div>`;
   const [x, y] = seatXY(p.i, S.n, 1);
-  return `<div class="${cls}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%"${settings.labels === 'show' ? ` title="${p.prof.blurb}"` : ''}><div class="cards">${cards}</div>${plate}${bubble}</div>`;
+  return `<div class="${cls}${x < 49 ? ' left' : ''}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%"${settings.labels === 'show' ? ` title="${p.prof.blurb}"` : ''}><div class="cards">${cards}</div>${plate}${bubble}</div>`;
 }
 const HUD_MIN = 8;
 function hudOf(p){ const h = table && table.n === S.n && table.hud ? table.hud[p.i] : null; return h && h.h ? h : null; }
@@ -1467,6 +1482,7 @@ function tabStats(){
 const WORDS = `<dl class="gloss">
   <dt>Blinds</dt><dd>The forced bets before the cards are dealt: $0.10 (small blind) and $0.20 (big blind). They move around the table each hand.</dd>
   <dt>Dealer</dt><dd>The player with the D button. They act last after the flop, which is a big advantage. Seats just before the dealer are "late"; seats that act first are "early".</dd>
+  <dt>Seat colors</dt><dd>Each seat's position is colored by how good it is after the flop: gold for the Dealer, green for Late, amber for Middle, red for Early, and grey for the blinds, which act first after the flop. Play more hands from the green and gold seats and fewer from the red ones.</dd>
   <dt>Limp</dt><dd>Just calling the big blind before the flop instead of raising.</dd>
   <dt>Raise</dt><dd>Making the bet bigger. A raise "to $0.60" means your total bet becomes $0.60.</dd>
   <dt>All-in</dt><dd>Betting all of your chips.</dd>
