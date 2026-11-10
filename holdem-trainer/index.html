@@ -102,7 +102,14 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 }
 /* seat position, colored by how good the seat is after the flop */
 .pos{display:inline-block;font:600 10px/1.5 var(--font-body);letter-spacing:.03em;border-radius:999px;padding:0 6px;color:var(--pc);background:color-mix(in srgb,var(--pc) 18%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pc) 40%,transparent)}
-.pos.early{--pc:#F39A8A} .pos.mid{--pc:#EBCB72} .pos.late{--pc:#7FD8A6} .pos.blind{--pc:#A9BACB}
+.pos.early,.p-early{--pc:#F39A8A} .pos.mid,.p-mid{--pc:#EBCB72} .pos.late,.p-late{--pc:#7FD8A6} .pos.blind,.p-blind{--pc:#A9BACB} .p-dlr{--pc:var(--gold)}
+/* name tags take on their position color */
+.seat[class*=" p-"] .plate{background:color-mix(in srgb,var(--pc) 22%,var(--plate));border-color:color-mix(in srgb,var(--pc) 60%,transparent)}
+/* soft glow on the felt in front of each seat, in the same color */
+.felt{overflow:hidden}
+.zone{position:absolute;width:50%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--pc) 52%,transparent),color-mix(in srgb,var(--pc) 20%,transparent) 58%,transparent);pointer-events:none}
+.zone.folded{opacity:.4}
+@media (max-width:640px){.zone{width:62%}}
 .pos.dlr{--pc:var(--gold);background:var(--gold);color:var(--gold-ink);box-shadow:none}
 .seat.hero .pos{font-size:11.5px;padding:1px 9px}
 .seat.is-btn .plate{box-shadow:0 0 0 1.5px color-mix(in srgb,var(--gold) 70%,transparent),0 8px 20px -6px rgba(0,0,0,.5)}
@@ -1276,7 +1283,7 @@ function seatHTML(p){
   else if (S.practiceDone && !p.folded && p.i !== 0) tag = S.board.length ? describe(evalHand([...p.cards, ...S.board])) : cap(handWords(cellOf(...p.cards)));
   else if (!p.folded) tag = p.allIn && !S.over ? 'All-in' : p.last;
   const bubble = tag ? `<span class="bubble">${tag}</span>` : '';
-  const cls = `seat${p.i === 0 ? ' hero' : ''}${p.i === S.button ? ' is-btn' : ''}${active ? ' active' : ''}${p.folded ? ' folded' : ''}`;
+  const cls = `seat p-${POS_CLS[p.pos] || 'mid'}${p.i === 0 ? ' hero' : ''}${p.i === S.button ? ' is-btn' : ''}${active ? ' active' : ''}${p.folded ? ' folded' : ''}`;
   if (p.i === 0) {
     const sw = canSwipe();
     return `<div class="${cls}${sw ? ' swipe' : ''}" style="left:50%"><div class="cards"${sw ? ' title="Drag up to fold"' : ''}>${cards}</div><div class="made">${heroMade()}</div>${plate}</div>`;
@@ -1344,7 +1351,14 @@ function renderTable(){
     const [x, y] = p.i === 0 ? [50, narrow.matches ? 64 : 67] : seatXY(p.i, S.n, 0.6);
     return `<div class="betchip" data-i="${p.i}" style="left:${x.toFixed(2)}%;top:${y.toFixed(2)}%">${money(p.bet)}</div>`;
   }).join('');
-  $('#table').innerHTML = `<div class="felt"></div>${chips}<div class="center"><div class="board">${board}</div>${mid}</div>${S.pl.map(seatHTML).join('')}`;
+  // shaded zones sit inside the felt, so convert each seat's table position to felt coordinates
+  const [fl, ft, fr, fb] = narrow.matches ? [5, 9, 5, 15] : [7, 10, 7, 13];
+  const zones = S.pl.map(p => {
+    const [x, y] = p.i === 0 ? [50, 100] : seatXY(p.i, S.n, 1);
+    const zx = (x - fl) / (100 - fl - fr) * 100, zy = p.i === 0 ? 100 : (y - ft) / (100 - ft - fb) * 100;
+    return `<div class="zone p-${POS_CLS[p.pos] || 'mid'}${p.folded ? ' folded' : ''}" style="left:${zx.toFixed(1)}%;top:${zy.toFixed(1)}%"></div>`;
+  }).join('');
+  $('#table').innerHTML = `<div class="felt">${zones}</div>${chips}<div class="center"><div class="board">${board}</div>${mid}</div>${S.pl.map(seatHTML).join('')}`;
   if (chips) placeChips();
 }
 
