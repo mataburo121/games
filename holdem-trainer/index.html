@@ -7,7 +7,7 @@
 :root{
   --bg:#ECEFF2; --surface:#FFFFFF; --surface-2:#F3F5F7; --ink:#0F1720; --muted:#5C6776; --line:#DCE2E8; --cell:#E7EBEF;
   --felt:#16594E; --felt-deep:#082B26; --felt-line:rgba(255,255,255,.14); --felt-ink:#EEF6F3; --felt-muted:#A3C4BA;
-  --rail:#161D21; --rail-hi:#2A353B; --plate:rgba(9,17,19,.82);
+  --rail:#161D21; --rail-hi:#2A353B; --plate:rgba(9,17,19,.93);
   --gold:#E3AE47; --gold-ink:#2B1D05;
   --card:#FDFDFB; --card-ink:#161A1E; --suit-s:#161A1E; --suit-h:#D2392F; --suit-d:#2462C9; --suit-c:#1F8A4C;
   --back1:#1F2F52; --back2:#2D4473;
@@ -22,7 +22,7 @@
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#090D11; --surface:#10161C; --surface-2:#151C24; --ink:#E6EBF0; --muted:#8B96A4; --line:#212A34; --cell:#19212A;
   --felt:#11493F; --felt-deep:#04181A; --felt-line:rgba(255,255,255,.11); --felt-ink:#E9F2EE; --felt-muted:#93B6AB;
-  --rail:#05080A; --rail-hi:#1B2328; --plate:rgba(5,10,12,.84);
+  --rail:#05080A; --rail-hi:#1B2328; --plate:rgba(5,10,12,.94);
   --accent:#35C28D; --on-accent:#04150E;
   --good:#40C985; --ok:#E5A93F; --bad:#F2695F;
   --shadow:0 0 0 1px var(--line); color-scheme:dark;
@@ -30,7 +30,7 @@
 :root[data-theme="dark"]{
   --bg:#090D11; --surface:#10161C; --surface-2:#151C24; --ink:#E6EBF0; --muted:#8B96A4; --line:#212A34; --cell:#19212A;
   --felt:#11493F; --felt-deep:#04181A; --felt-line:rgba(255,255,255,.11); --felt-ink:#E9F2EE; --felt-muted:#93B6AB;
-  --rail:#05080A; --rail-hi:#1B2328; --plate:rgba(5,10,12,.84);
+  --rail:#05080A; --rail-hi:#1B2328; --plate:rgba(5,10,12,.94);
   --accent:#35C28D; --on-accent:#04150E;
   --good:#40C985; --ok:#E5A93F; --bad:#F2695F;
   --shadow:0 0 0 1px var(--line); color-scheme:dark;
@@ -92,7 +92,8 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .hud{font-size:10.5px;color:var(--felt-muted);line-height:1.25}
 .hud b{font:600 10.5px var(--font-mono);color:var(--felt-ink)}
 .seat.active .plate{box-shadow:0 0 0 2px var(--gold),0 0 22px -2px color-mix(in srgb,var(--gold) 70%,transparent)}
-.seat.folded{opacity:.42}
+.seat.folded{opacity:.62}
+.seat.folded .cards,.seat.folded .bubble{opacity:.6}
 @media (max-width:640px){
   .seat{width:86px;gap:3px}.seat.hero{width:150px;--cw:44px}
   .av{display:none}
@@ -101,14 +102,14 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
   .pn{font-size:11px}.pm{font-size:10px;justify-content:center}.pm b{font-size:10px}.hud{font-size:9.5px;text-align:center}
 }
 /* seat position, colored by how good the seat is after the flop */
-.pos{display:inline-block;font:600 10px/1.5 var(--font-body);letter-spacing:.03em;border-radius:999px;padding:0 6px;color:var(--pc);background:color-mix(in srgb,var(--pc) 18%,transparent);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--pc) 40%,transparent)}
-.pos.early,.p-early{--pc:#F39A8A} .pos.mid,.p-mid{--pc:#EBCB72} .pos.late,.p-late{--pc:#7FD8A6} .pos.blind,.p-blind{--pc:#A9BACB} .p-dlr{--pc:var(--gold)}
+.pos{display:inline-block;font:700 10px/1.5 var(--font-body);letter-spacing:.02em;border-radius:999px;padding:0 6px;color:#0E1418;background:var(--pc)}
+.pos.early,.p-early{--pc:#FF6B5B} .pos.mid,.p-mid{--pc:#FFC93C} .pos.late,.p-late{--pc:#3FE08E} .pos.blind,.p-blind{--pc:#B9C8D8} .p-dlr{--pc:var(--gold)}
 /* name tags take on their position color */
-.seat[class*=" p-"] .plate{background:color-mix(in srgb,var(--pc) 22%,var(--plate));border-color:color-mix(in srgb,var(--pc) 60%,transparent)}
+.seat[class*=" p-"] .plate{background:color-mix(in srgb,var(--pc) 24%,var(--plate));border:1.5px solid var(--pc)}
 /* soft glow on the felt in front of each seat, in the same color */
 .felt{overflow:hidden}
 .zone{position:absolute;width:50%;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(closest-side,color-mix(in srgb,var(--pc) 52%,transparent),color-mix(in srgb,var(--pc) 20%,transparent) 58%,transparent);pointer-events:none}
-.zone.folded{opacity:.4}
+.zone.folded{opacity:.6}
 @media (max-width:640px){.zone{width:62%}}
 .pos.dlr{--pc:var(--gold);background:var(--gold);color:var(--gold-ink);box-shadow:none}
 .seat.hero .pos{font-size:11.5px;padding:1px 9px}
@@ -128,8 +129,8 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .toast{position:absolute;left:50%;bottom:calc(46px * 1.4 + 90px);transform:translateX(-50%);z-index:6;font:600 12.5px var(--font-body);color:var(--felt-ink);background:var(--plate);border:1px solid var(--felt-line);border-radius:999px;padding:5px 12px;white-space:nowrap;box-shadow:0 8px 20px -6px rgba(0,0,0,.5)}
 @media (prefers-reduced-motion:reduce){.seat.hero .cards{transition:none}}
 .meter{display:flex;gap:2px;margin:3px 0 1px}
-.meter i{width:11px;height:5px;border-radius:2px;background:rgba(255,255,255,.14)}
-.meter i.on{background:var(--pc);box-shadow:0 0 6px -1px var(--pc)}
+.meter i{width:11px;height:5px;border-radius:2px;background:rgba(255,255,255,.22)}
+.meter i.on{background:var(--pc);box-shadow:0 0 8px 0 color-mix(in srgb,var(--pc) 70%,transparent)}
 .seat.hero .meter i{width:14px;height:6px}
 @media (max-width:640px){.meter{justify-content:center;gap:2px}.meter i{width:8px;height:4px}.seat.hero .meter i{width:12px;height:5px}}
 .tag-reg{color:var(--t-reg)} .tag-rock{color:var(--t-rock)} .tag-maniac{color:var(--t-maniac)} .tag-station{color:var(--t-station)}
@@ -152,13 +153,13 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .bubble{font:600 11px var(--font-body);background:var(--card);color:var(--card-ink);border-radius:999px;padding:1px 9px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 6px rgba(0,0,0,.3)}
 @media (max-width:640px){.bubble{font-size:10px;padding:0 7px}}
 /* bet markers look like a chip with its stack value */
-.betchip{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:5px;font:600 11.5px/1 var(--font-mono);color:var(--felt-ink);background:rgba(0,0,0,.32);border-radius:999px;padding:3px 9px 3px 3px;z-index:1;white-space:nowrap;font-variant-numeric:tabular-nums}
+.betchip{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:5px;font:600 11.5px/1 var(--font-mono);color:var(--felt-ink);background:rgba(0,0,0,.5);border-radius:999px;padding:3px 9px 3px 3px;z-index:1;white-space:nowrap;font-variant-numeric:tabular-nums}
 .betchip::before{content:"";width:15px;height:15px;border-radius:50%;background:radial-gradient(circle,var(--gold) 0 42%,transparent 43%),repeating-conic-gradient(var(--gold) 0 30deg,#FFF6E0 0 60deg);box-shadow:0 0 0 1.5px var(--gold),0 1px 2px rgba(0,0,0,.4)}
 @media (max-width:640px){.betchip{font-size:10px;padding:2px 7px 2px 2px}.betchip::before{width:12px;height:12px}}
 .center{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);display:flex;flex-direction:column;align-items:center;gap:8px;width:min(80%,440px);color:var(--felt-ink);z-index:1;--cw:42px}
 @media (max-width:640px){.center{--cw:33px;top:43%}}
 .board{display:flex;gap:5px}
-.potline{display:flex;gap:10px;align-items:baseline;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--felt-muted);background:rgba(0,0,0,.28);border-radius:999px;padding:3px 12px}
+.potline{display:flex;gap:10px;align-items:baseline;font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--felt-muted);background:rgba(0,0,0,.45);border-radius:999px;padding:3px 12px}
 .potline b{font:600 14px var(--font-mono);letter-spacing:0;color:var(--felt-ink);text-transform:none}
 .result{background:var(--plate);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);border:1px solid color-mix(in srgb,var(--gold) 60%,transparent);border-radius:14px;padding:7px 14px;text-align:center;font-size:12px;box-shadow:0 10px 24px -8px rgba(0,0,0,.5)}
 .result strong{font:600 13.5px var(--font-display);display:block;text-wrap:balance}
@@ -194,6 +195,8 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .pill.ok{background:color-mix(in srgb,var(--ok) 17%,transparent);color:var(--ok)}
 .pill.bad{background:color-mix(in srgb,var(--bad) 15%,transparent);color:var(--bad)}
 .pill.drill{background:var(--accent-soft);color:var(--accent)}
+.pill.skip{background:var(--cell);color:var(--muted)}
+.nowrap{white-space:nowrap}
 .actions{display:flex;flex-direction:column;gap:8px}
 .act-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
 .btn{border:0;background:var(--surface);border-radius:14px;min-height:54px;padding:10px 8px;font:600 16px var(--font-body);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;min-width:0;line-height:1.15;text-align:center;box-shadow:var(--shadow);transition:transform .12s,box-shadow .12s,background .12s}
@@ -293,6 +296,8 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
       <select id="drill"></select></div>
       <div class="ctl"><span class="ctl-label">Redo mistakes</span>
       <div class="seg" data-key="redo" role="group" aria-label="Redo mistakes"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
+      <div class="ctl"><span class="ctl-label">Skip junk hands</span>
+      <div class="seg" data-key="skipJunk" role="group" aria-label="Fold obvious junk hands automatically"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
       <div class="ctl"><span class="ctl-label">Stats by spot</span>
       <div class="seg" data-key="bySpot" role="group" aria-label="Stats by situation"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
     </div></section>
@@ -533,7 +538,7 @@ const store = {
 };
 const blankStats = () => ({ hands: 0, net: 0, decisions: 0, good: 0, ok: 0, bad: 0, leak: 0, spots: {} });
 const saved = store.get() || {};
-const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0 }, saved.settings || {});
+const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on' }, saved.settings || {});
 let stats = Object.assign(blankStats(), saved.stats || {});
 let log = Array.isArray(saved.log) ? saved.log : [];
 let redo = Array.isArray(saved.redo) ? saved.redo : []; // missed spots saved for replay
@@ -653,6 +658,7 @@ function setupHand(){
   commit(pl[S.sbI], SB_C); commit(pl[S.bbI], BB_C); S.cur = BB_C;
   S.hist.push({ st: 0, t: `${nm(pl[S.sbI])} post${S.sbI === 0 ? '' : 's'} $0.10, ${nm(pl[S.bbI])} post${S.bbI === 0 ? '' : 's'} $0.20` });
   S.toAct = findNext(S.bbI);
+  S.junk = !SIM && settings.skipJunk === 'on' && isJunk(S.pl[0].cards);
   if (!SIM) save();
 }
 function dueRedo(){
@@ -815,7 +821,9 @@ function endHand(){
     S.hudDone = true;
     for (const p of S.pl) { if (p.i === 0) continue; const h = table.hud[p.i]; h.h++; if (p.vp) h.vpip++; if (p.pr) h.pfr++; }
   }
-  save(); render();
+  save();
+  if (S.autoFolded) { timer = setTimeout(newHand, 0); return; }
+  render();
 }
 function skipHand(){
   // hero already folded: their result is final, so count it and move on
@@ -829,6 +837,12 @@ function nextTurn(){
     S.analysis = analyze(300);
     if (S.analysis.spot === SIM.target) { SIM.found = true; return; }
     heroAuto(); return;
+  }
+  if (S.junk) {
+    // junk hand: play the bots instantly up to your turn, fold for you, finish the hand and deal again
+    if (S.toAct !== 0) { botMove(); return; }
+    if (toCall(S.pl[0]) > 0) { ui.skipped.push(S.pl[0].cards.slice()); S.autoFolded = true; act(0, 'fold'); return; }
+    S.junk = false; // big blind with nobody raising: you can check for free, so you decide
   }
   if (S.toAct === 0) { S.analysis = analyze(); render(); return; }
   // once you have folded, finish the hand instantly and just show who won
@@ -1231,6 +1245,7 @@ function heroAct(type, to){
                 best: bestLabel(A), g, loss, why: A.why, short: A.short, n: A.n, sz, spot: A.spot, note });
   log = log.slice(0, 40);
   stats.decisions++; stats[g]++; stats.leak += loss;
+  ui.skipped = [];
   if (A.spot) {
     const sp = stats.spots[A.spot] || (stats.spots[A.spot] = { n: 0, good: 0, ok: 0, bad: 0, leak: 0, r: '' });
     sp.n++; sp[g]++; sp.leak += loss; sp.r = (g[0] + sp.r).slice(0, 20);
@@ -1250,7 +1265,7 @@ function heroAct(type, to){
 const $ = s => document.querySelector(s);
 const narrow = window.matchMedia('(max-width:640px)');
 const GL = { good: 'Good', ok: 'Fine', bad: 'Mistake' };
-const ui = { tab: 'range', more: false, sizing: false, key: null, amt: null, drillN: 0 };
+const ui = { tab: 'range', more: false, sizing: false, key: null, amt: null, drillN: 0, skipped: [] };
 const isQuiz = () => settings.mode === 'quiz' || (S && S.practice === 'redo');
 const sm = v => `${v > 0 ? '+' : v < 0 ? '−' : ''}${money(Math.abs(v))}`;
 function cardHTML(c, o = {}){
@@ -1307,7 +1322,7 @@ const HUD_MIN = 8;
 function hudOf(p){ const h = table && table.n === S.n && table.hud ? table.hud[p.i] : null; return h && h.h ? h : null; }
 function hudLine(p){
   const h = hudOf(p);
-  if (!h || h.h < HUD_MIN) return `<div class="hud" title="Their numbers show up after ${HUD_MIN} hands">New · ${h ? h.h : 0} hands</div>`;
+  if (!h || h.h < HUD_MIN) return `<div class="hud" title="Their numbers show up after ${HUD_MIN} hands">New · ${h ? h.h : 0} hand${h && h.h === 1 ? '' : 's'}</div>`;
   return `<div class="hud" title="Plays: share of hands they put money in before the flop. Raises: share of hands they raised before the flop. ${h.h} hands seen."><b>${pct(h.vpip / h.h)}</b> play · <b>${pct(h.pfr / h.h)}</b> raise</div>`;
 }
 function hudText(p){
@@ -1442,7 +1457,7 @@ function renderStrip(){
   const e = log[0] && log[0].id === S.id ? log[0] : null;
   let html = '', tone = '';
   if (!S.over && S.toAct === 0 && !me.folded) {
-    const prev = practiceBanner() + (e ? feedbackHTML(e, true) : '');
+    const prev = skippedLine() + practiceBanner() + (e ? feedbackHTML(e, true) : '');
     const tc = toCall(me);
     if (quiz) {
       html = `${prev}<div><b>Your move.</b> ${tc > 0 ? `It costs ${money(tc)} to call, and the pot is ${money(potTotal())}.` : 'Nobody has bet yet.'} <span class="muted">The coach grades you after you act.</span></div>`;
@@ -1465,6 +1480,11 @@ function renderStrip(){
   el.innerHTML = html;
 }
 
+function skippedLine(){
+  const k = ui.skipped.length; if (!k) return '';
+  const shown = ui.skipped.slice(-4).map(c => `<span class="nowrap">${minis(c)}</span>`).join(' ');
+  return `<div class="prev"><span class="pill skip">Skipped</span><span>${k} junk hand${k === 1 ? '' : 's'} folded for you: ${shown}${k > 4 ? ' …' : ''}</span></div>`;
+}
 function practiceBanner(){
   if (S.notice) return `<div class="prev"><span class="muted">${S.notice}</span></div>`;
   if (S.practice === 'drill') return `<div class="prev"><span class="pill drill">Drill</span><span>${SPOTS[S.drillSpot]}</span><span class="muted">· spot ${ui.drillN}${settings.drill === 'auto' ? ' · your weakest spot' : ''}</span></div>`;
@@ -1623,6 +1643,12 @@ $('#dock').addEventListener('click', e => {
 });
 // swipe up on your own cards to fold (mouse drag works too)
 const touchUI = window.matchMedia('(hover:none)');
+// obvious junk: bottom half of starting hands, minus anything the coach plays in some spot
+function isJunk(cards){
+  const cell = cellOf(...cards), nc = cellName(cell);
+  if (PCT[cell] < 0.5 || nc[0] === nc[1]) return false;
+  return !(SPEC_LIMP.has(nc) || CALLERS.has(nc) || STEAL3B.has(nc) || PREMIUM.has(nc) || BIG_OFFSUIT.has(nc));
+}
 // teach the gesture on the Fold button until it has been used a few times
 const foldLabel = () => canSwipe() && touchUI.matches && (settings.swipeSeen || 0) < 3 ? '<span class="foldlbl">Fold<small>or swipe cards ↑</small></span>' : 'Fold';
 function canSwipe(){ return settings.swipe === 'on' && S && !SIM && !S.over && S.toAct === 0 && !S.pl[0].folded && !!S.analysis; }
