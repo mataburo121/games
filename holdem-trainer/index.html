@@ -127,6 +127,11 @@ select{background:var(--surface-2);border:1px solid var(--line);border-radius:10
 .foldlbl small{font:500 11px var(--font-body);color:var(--muted);margin-top:2px}
 .toast{position:absolute;left:50%;bottom:calc(46px * 1.4 + 90px);transform:translateX(-50%);z-index:6;font:600 12.5px var(--font-body);color:var(--felt-ink);background:var(--plate);border:1px solid var(--felt-line);border-radius:999px;padding:5px 12px;white-space:nowrap;box-shadow:0 8px 20px -6px rgba(0,0,0,.5)}
 @media (prefers-reduced-motion:reduce){.seat.hero .cards{transition:none}}
+.meter{display:flex;gap:2px;margin:3px 0 1px}
+.meter i{width:11px;height:5px;border-radius:2px;background:rgba(255,255,255,.14)}
+.meter i.on{background:var(--pc);box-shadow:0 0 6px -1px var(--pc)}
+.seat.hero .meter i{width:14px;height:6px}
+@media (max-width:640px){.meter{justify-content:center;gap:2px}.meter i{width:8px;height:4px}.seat.hero .meter i{width:12px;height:5px}}
 .tag-reg{color:var(--t-reg)} .tag-rock{color:var(--t-rock)} .tag-maniac{color:var(--t-maniac)} .tag-station{color:var(--t-station)}
 .made{font:600 12px var(--font-body);color:var(--felt-ink);background:var(--plate);border:1px solid var(--felt-line);border-radius:999px;padding:1px 10px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
 .cards{display:flex;gap:3px;min-height:calc(var(--cw)*1.4)}
@@ -1267,6 +1272,13 @@ function heroMade(){
 }
 const POS_CLS = { 'Early': 'early', 'Middle': 'mid', 'Late': 'late', 'Dealer': 'dlr', 'Small blind': 'blind', 'Big blind': 'blind' };
 const POS_TIP = { early: 'Acts early after the flop: play tight', mid: 'Middle seat', late: 'Acts late after the flop: a good seat', dlr: 'Dealer: acts last after the flop, the best seat', blind: 'Blind: acts first after the flop' };
+// position meter: one bar per seat; filled bars = when this seat acts after the flop (all filled = dealer, acts last)
+const ORD = ['1st', '2nd', '3rd', '4th', '5th', '6th', '7th'];
+function meterHTML(p){
+  const off = offset(p.i);
+  const bars = Array.from({ length: S.n }, (_, k) => `<i${k <= off ? ' class="on"' : ''}></i>`).join('');
+  return `<span class="meter" role="img" aria-label="Acts ${ORD[off]} of ${S.n} after the flop" title="Acts ${ORD[off]} of ${S.n} after the flop">${bars}</span>`;
+}
 const posPill = pos => { const c = POS_CLS[pos] || 'mid'; return `<span class="pos ${c}" title="${POS_TIP[c]}">${pos}</span>`; };
 // avatar colors follow the seat, not the player type, so they never give a type away
 const AVC = ['#3D6F92','#7B5E9C','#9B6A3C','#4D7F5E','#94505F','#4F62A0'];
@@ -1277,7 +1289,7 @@ function seatHTML(p){
   const shown = settings.labels === 'show' && p.i !== 0;
   const label = p.i === 0 ? 'You' : shown ? `<span class="tag-${p.prof.key}">${pname(p)}</span>` : pname(p);
   const av = p.i === 0 ? 'var(--accent)' : AVC[(p.i - 1) % AVC.length], ini = p.i === 0 ? 'Y' : pname(p).charAt(0);
-  const plate = `<div class="plate">${p.i === S.button ? '<span class="dbtn" title="Dealer button: this seat acts last after the flop">D</span>' : ''}<span class="av" style="--av:${av}" aria-hidden="true">${ini}</span><div class="pinfo"><div class="pn">${label}</div><div class="pm">${posPill(p.pos)}<b>${money(p.stack)}</b></div>${shown ? `<div class="hud tag-${p.prof.key}">${p.prof.name}</div>` : p.i !== 0 ? hudLine(p) : ''}</div></div>`;
+  const plate = `<div class="plate">${p.i === S.button ? '<span class="dbtn" title="Dealer button: this seat acts last after the flop">D</span>' : ''}<span class="av" style="--av:${av}" aria-hidden="true">${ini}</span><div class="pinfo"><div class="pn">${label}</div><div class="pm">${posPill(p.pos)}<b>${money(p.stack)}</b></div>${meterHTML(p)}${shown ? `<div class="hud tag-${p.prof.key}">${p.prof.name}</div>` : p.i !== 0 ? hudLine(p) : ''}</div></div>`;
   let tag = '';
   if (S.over && S.showdown && !p.folded && p.i !== 0) tag = describe(S.result.vals[p.i]);
   else if (S.practiceDone && !p.folded && p.i !== 0) tag = S.board.length ? describe(evalHand([...p.cards, ...S.board])) : cap(handWords(cellOf(...p.cards)));
@@ -1546,6 +1558,7 @@ const WORDS = `<dl class="gloss">
   <dt>Blinds</dt><dd>The forced bets before the cards are dealt: $0.10 (small blind) and $0.20 (big blind). They move around the table each hand.</dd>
   <dt>Dealer</dt><dd>The player with the D button. They act last after the flop, which is a big advantage. Seats just before the dealer are "late"; seats that act first are "early".</dd>
   <dt>Seat colors</dt><dd>Each seat's position is colored by how good it is after the flop: gold for the Dealer, green for Late, amber for Middle, red for Early, and grey for the blinds, which act first after the flop. Play more hands from the green and gold seats and fewer from the red ones.</dd>
+  <dt>Position meter</dt><dd>The bars under each name. One bar per seat at the table; the filled bars show when that player acts after the flop. All bars filled means they act last (the Dealer), one bar means they act first (the small blind).</dd>
   <dt>Limp</dt><dd>Just calling the big blind before the flop instead of raising.</dd>
   <dt>Raise</dt><dd>Making the bet bigger. A raise "to $0.60" means your total bet becomes $0.60.</dd>
   <dt>All-in</dt><dd>Betting all of your chips.</dd>
