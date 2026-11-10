@@ -1090,7 +1090,7 @@ function analyze(iters){
         rule = 'Friendly: limp in. Save your raises for strong hands.';
         why = `${seatWhy} Small pairs, suited aces and suited connectors win big pots when they make a set, flush or straight, so a cheap low-key flop suits them. Miss the flop? Let it go.`;
       } else if (p < openT) {
-        good.add('raise'); ok.add('call'); label = `${hw}, a strong hand from the ${me.pos} seat`;
+        good.add('raise'); ok.add('call'); label = p < 0.1 ? `${hw}, a strong hand` : ctx.behind <= 1 ? `${hw}, playable because only the big blind is left` : `${hw}, playable from the ${me.pos} seat`;
         rule = `Raise to ${M(size)} (3 big blinds).`;
         why = `${seatWhy} ${sizeWhy} Limping is OK too, but strong hands earn more in a raised pot.`;
       } else if (p < openT * 1.25) {
@@ -1340,6 +1340,17 @@ function analyze(iters){
         rule = H.kind === 'bottom' ? 'Rule: fold bottom pair to a bet.' : H.draw === 'gutshot' ? 'Rule: fold a gutshot draw to a bet.' : 'Rule: with nothing, fold. Don\'t fight for every pot.';
         why = passiveBettor ? `The ${btag} usually has something when they bet, and you can't beat even their bluffs. Fold and wait for a better spot.` : 'Avoid fancy plays: when you have little and they bet, just fold.';
       }
+    }
+  }
+  if (st === 0 && ctx && ctx.kind === 'unopened' && me.pos === 'Small blind' && good.has('raise') && PCT[cellOf(...me.cards)] >= 0.1) {
+    const bbp = S.pl[S.bbI], bbr = readOf(bbp).key;
+    if (bbr === 'station') {
+      good.clear(); ok.clear(); good.add('call'); ok.add('raise'); ok.add('fold');
+      rule = 'Just call the extra $0.10. Raising won\'t make a calling station fold.';
+      why = `Everyone folded to you, so only ${pname(bbp)} in the big blind is left. A raise here mostly tries to win the blinds, but a calling station calls almost every raise, and you would play a medium hand while acting first after the flop. Calling is cheap and still lets you see a flop.`;
+      size = null;
+    } else if (bbr === 'rock' || bbr === 'reg') {
+      why = `Everyone folded to you, so only ${pname(bbp)} in the big blind is left. ${bbr === 'rock' ? 'Rocks fold most hands to a raise' : 'Solid players fold plenty of hands to a raise'}, so raising often wins the blinds right away. ${why}`;
     }
   }
   if (st === 0 && settings.style === 'friendly' && ctx.kind === 'facing' && good.has('raise') && ['AA', 'KK'].indexOf(cellName(cellOf(...me.cards))) < 0) {
