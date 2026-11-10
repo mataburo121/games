@@ -287,6 +287,8 @@ kbd{font:600 10px var(--font-mono);border:1px solid currentColor;border-radius:5
       <div class="seg" data-key="swipe" role="group" aria-label="Swipe up on your cards to fold"><button type="button" data-val="on">On</button><button type="button" data-val="off">Off</button></div></div>
     </div></section>
     <section class="sgroup"><h2>Coach</h2><div class="row">
+      <div class="ctl"><span class="ctl-label">Style</span>
+      <div class="seg" data-key="style" role="group" aria-label="Coach style"><button type="button" data-val="friendly" title="Raise less often and smaller; limp with speculative hands">Friendly</button><button type="button" data-val="max" title="Raise more and bigger to win the most money">Max win</button></div></div>
       <div class="ctl"><span class="ctl-label">Mode</span>
       <div class="seg" id="modeSeg" role="group" aria-label="Coach mode">
         <button type="button" id="mode-hints" data-mode="hints">Hints on</button>
@@ -540,7 +542,7 @@ const store = {
 };
 const blankStats = () => ({ hands: 0, net: 0, decisions: 0, good: 0, ok: 0, bad: 0, leak: 0, spots: {} });
 const saved = store.get() || {};
-const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on' }, saved.settings || {});
+const settings = Object.assign({ mode: 'hints', players: 6, stack: 2000, mix: 'home', drill: 'off', redo: 'on', bySpot: 'on', speed: 'normal', labels: 'hide', swipe: 'on', swipeSeen: 0, skipJunk: 'on', style: 'friendly' }, saved.settings || {});
 let stats = Object.assign(blankStats(), saved.stats || {});
 let log = Array.isArray(saved.log) ? saved.log : [];
 let redo = Array.isArray(saved.redo) ? saved.redo : []; // missed spots saved for replay
@@ -991,7 +993,54 @@ function analyze(iters){
   const M = v => v != null ? money(v) : 'all-in';
   let label = '', rule = '', why = '', size = null, sizeWhy = '', spot = '';
 
-  if (st === 0) {
+  if (st === 0 && settings.style === 'friendly' && ctx.kind !== 'facing') {
+    // Friendly style: 3x raises, mostly saved for strong hands; limp speculative hands; raise limpers only with premiums
+    const cell = cellOf(...me.cards), nc = cellName(cell), p = PCT[cell], hw = cap(handWords(cell)), L = S.limpers;
+    spot = ctx.kind === 'unopened' ? 'open' : ctx.kind === 'limped' ? 'limped' : 'bb';
+    const openT = OPEN_BY_BEHIND[Math.min(ctx.behind, 6)], late = ctx.behind <= 2;
+    const seatWhy = `From your seat, play roughly the best ${pct(openT)} of hands: more from the Dealer and Late seats, fewer from early ones.`;
+    if (ctx.kind === 'unopened') {
+      size = fit(3 * BB_C);
+      sizeWhy = 'A standard 3x raise ($0.60) builds the pot with your good hands without drawing much attention.';
+      if (p < openT && SPEC_LIMP.has(nc) && !PREMIUM.has(nc)) {
+        good.add('call'); ok.add('raise'); label = `${hw}, a hand that wants a cheap flop`;
+        rule = 'Friendly: limp in. Save your raises for strong hands.';
+        why = `${seatWhy} Small pairs, suited aces and suited connectors win big pots when they make a set, flush or straight, so a cheap low-key flop suits them. Miss the flop? Let it go.`;
+      } else if (p < openT) {
+        good.add('raise'); ok.add('call'); label = `${hw}, a strong hand from the ${me.pos} seat`;
+        rule = `Raise to ${M(size)} (3 big blinds).`;
+        why = `${seatWhy} ${sizeWhy} Limping is OK too, but strong hands earn more in a raised pot.`;
+      } else if (p < openT * 1.25) {
+        good.add('fold'); ok.add('call'); ok.add('raise'); label = `${hw}, just outside your range from this seat`;
+        rule = 'Fold. This one is close, so playing it is not a big mistake.'; why = seatWhy;
+      } else { good.add('fold'); label = `${hw}, too weak from this seat`; rule = 'Rule: play tight. Fold.'; why = `${seatWhy} Folding weak hands is the biggest edge you have in this game, and nobody notices it.`; }
+    } else if (ctx.kind === 'limped') {
+      const limpWord = `${L} player${L === 1 ? '' : 's'} limped in`;
+      size = fit((3 + L) * BB_C);
+      sizeWhy = `Raise 3 big blinds plus 1 per limper (${M(size)}).`;
+      if (PREMIUM.has(nc)) {
+        good.add('raise'); ok.add('call'); label = `${hw}, a premium hand`;
+        rule = `Raise to ${M(size)}. Big hands are worth a raise.`;
+        why = `${limpWord}. Limpers usually hold weaker hands and will call, so build the pot with the best hand. ${sizeWhy}`;
+      } else if (SPEC_LIMP.has(nc)) {
+        good.add('call'); ok.add('fold'); label = `${hw}, a good hand for a cheap multiway pot`;
+        rule = 'Limp behind with small pairs, suited aces and suited connectors.';
+        why = `${limpWord}, so it is cheap to see a flop. When these hands hit big, passive players pay you off. If you miss, let it go.`;
+      } else if (BIG_OFFSUIT.has(nc) && p < openT) {
+        if (late) { good.add('call'); ok.add('fold'); ok.add('raise'); } else { good.add('fold'); ok.add('call'); }
+        label = `${hw}, a trap hand in a limped pot`;
+        rule = late ? 'Limp behind from a late seat. Be careful with one pair.' : 'Fold. Offsuit big cards play badly in big multiway pots.';
+        why = 'Offsuit big cards often make top pair with a weak kicker, which loses the most money in home games. From a late seat a cheap look is fine; just don\'t get attached to one pair.';
+      } else if (p < openT) {
+        good.add('call'); ok.add('raise'); label = `${hw}, a hand worth playing`;
+        rule = 'Limp behind. A raise is fine sometimes.'; why = `${limpWord}. Friendly style keeps the pot small with medium hands and saves raises for big ones.`;
+      } else { good.add('fold'); label = `${hw}, not good enough`; rule = 'Rule: play tight. Fold.'; why = 'Even when it is cheap, weak hands make second-best hands in pots with several players.'; }
+    } else {
+      size = fit((3 + L) * BB_C); sizeWhy = `Raise 3 big blinds plus 1 per limper (${M(size)}).`;
+      if (['AA', 'KK', 'QQ', 'AKs', 'AKo'].indexOf(nc) >= 0) { good.add('raise'); ok.add('check'); label = `${hw}, a premium hand`; rule = `Raise to ${M(size)}.`; why = `Nobody raised, so build the pot with one of the best hands. ${sizeWhy}`; }
+      else { good.add('check'); if (PREMIUM.has(nc)) ok.add('raise'); label = hw; rule = 'Check and see the flop for free.'; why = 'You are already in for the big blind and nobody raised, so take the free look.'; }
+    }
+  } else if (st === 0) {
     const cell = cellOf(...me.cards), nc = cellName(cell), p = PCT[cell], hw = cap(handWords(cell));
     const isAAKK = nc === 'AA' || nc === 'KK', L = S.limpers;
     spot = ctx.kind === 'unopened' ? 'open' : ctx.kind === 'limped' ? 'limped' : ctx.kind === 'bbOption' ? 'bb' : (S.level >= 2 || tc >= me.stack * 0.35) ? 'vs3bet' : 'vsraise';
@@ -1202,6 +1251,11 @@ function analyze(iters){
         why = passiveBettor ? `The ${btag} usually has something when they bet, and you can't beat even their bluffs. Fold and wait for a better spot.` : 'Avoid fancy plays: when you have little and they bet, just fold.';
       }
     }
+  }
+  if (st === 0 && settings.style === 'friendly' && ctx.kind === 'facing' && good.has('raise') && ['AA', 'KK'].indexOf(cellName(cellOf(...me.cards))) < 0) {
+    good.delete('raise'); good.add('call'); ok.add('raise');
+    rule = 'Friendly: just call. Save re-raises for aces and kings.';
+    why = `Re-raising draws attention and makes the pot big before the flop. With anything below aces or kings, calling keeps it low-key and you still see a flop with a good hand. ${why}`;
   }
   if (!cr) {
     const alt = tc > 0 ? 'call' : 'check';
@@ -1597,7 +1651,8 @@ const WORDS = `<dl class="gloss">
   <dt>Draw</dt><dd>One card away from a flush or straight. Open-ended means either end works; a gutshot needs one exact card.</dd>
   <dt>Dry or wet board</dt><dd>A dry board has few possible straights or flushes; a wet board has lots of them.</dd>
   <dt>Slow-play</dt><dd>Checking or calling with a big hand to trap. At low stakes, betting big hands is usually better.</dd>
-  <dt>Play / raise (under each name)</dt><dd>How often that player puts money in before the flop, and how often they raise before the flop, over the hands you have seen at this table. High play with low raise is a calling station; low play is a rock; high raise is a maniac.</dd>
+  <dt>Play / raise (under each name)</dt><dd>How often that player puts money in before the flop, and how often they raise before the flop, over the hands you have seen at this table. Rough guide over many hands: calling station about 40% play / 7% raise; rock about 15% / 7%; solid player about 22% / 16%; maniac about 43% / 36%. Small samples swing a lot, so trust the numbers more after 30+ hands.</dd>
+  <dt>Coach style</dt><dd>Friendly (the default) raises less often and smaller: $0.60 first in, limps with small pairs and suited hands, raises limpers only with premium hands, and re-raises only with aces or kings. Max win raises more and bigger to win the most money, at the cost of drawing more attention.</dd>
   <dt>Calling station</dt><dd>A player who calls with almost anything. Never bluff them; bet your good hands.</dd>
   <dt>Isolation raise</dt><dd>Raising after one or more players limped, to play the pot against them with a better hand. Raise 4 big blinds plus 1 for each limper.</dd>
   <dt>Value bet</dt><dd>Betting because worse hands will call. A "thin" value bet uses a medium hand like top pair with a weak kicker, which works against players who call too much.</dd>
@@ -1711,7 +1766,9 @@ $('#drill').addEventListener('change', e => { settings.drill = e.target.value; u
 $('#settings').addEventListener('click', e => {
   const b = e.target.closest('.seg[data-key] button'); if (!b) return;
   const key = b.closest('.seg').dataset.key;
-  settings[key] = b.dataset.val; save(); renderControls(); if (!SIM) { renderTabs(); renderTable(); }
+  settings[key] = b.dataset.val; save(); renderControls();
+  if (!SIM && key === 'style' && S && !S.over && S.toAct === 0) { S.analysis = analyze(); render(); return; }
+  if (!SIM) { renderTabs(); renderTable(); }
 });
 let resetArmed = null;
 $('#tabBody').addEventListener('click', e => {
